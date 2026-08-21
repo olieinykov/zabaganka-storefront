@@ -2,9 +2,20 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    databaseDriverOptions: isProduction ? {
+     connection: {
+       ssl: { rejectUnauthorized: false },
+     },
+     pool: {
+       min: 2,
+       max: 10,
+     },
+    } : {},
     redisUrl: process.env.REDIS_URL,
     http: {
       storeCors: process.env.STORE_CORS!,
