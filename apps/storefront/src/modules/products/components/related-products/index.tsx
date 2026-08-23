@@ -2,6 +2,7 @@ import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { HttpTypes } from "@medusajs/types"
 import Product from "../product-preview"
+import { PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
 
 type RelatedProductsProps = {
   product: HttpTypes.StoreProduct
@@ -34,7 +35,7 @@ export default async function RelatedProducts({
   queryParams.is_giftcard = false
 
   const products = await listProducts({
-    queryParams,
+    queryParams: { ...queryParams, fields: PRODUCT_PREVIEW_FIELDS },
     countryCode,
   }).then(({ response }) => {
     return response.products.filter(

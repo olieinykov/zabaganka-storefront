@@ -2,7 +2,7 @@ import { getBaseURL } from "@lib/util/env"
 import { ToastProvider } from "@modules/common/components/toast"
 import { Metadata } from "next"
 import { Cormorant_Garamond, Manrope } from "next/font/google"
-import "styles/globals.css"
+import "@styles/globals.css"
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin", "cyrillic"],

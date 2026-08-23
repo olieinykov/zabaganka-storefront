@@ -5,7 +5,7 @@ import SectionHeading from "@modules/home/components/section-heading"
 
 export default async function CategoryGrid() {
   const categories = (await listCategories().catch(() => [])) || []
-  const topLevel = categories.filter((c) => !c.parent_category).slice(0, 4)
+  const topLevel = categories.filter((c) => !c.parent_category_id).slice(0, 4)
 
   if (!topLevel.length) {
     return null
@@ -34,7 +34,6 @@ export default async function CategoryGrid() {
                 color="#8a7a63"
               />
               
-              {/* Плавающая плашка с текстом */}
               <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 bg-white border border-line px-3 py-2 sm:px-4 sm:py-3">
                 <span className="font-display text-base sm:text-lg text-navy block truncate">
                   {category.name}

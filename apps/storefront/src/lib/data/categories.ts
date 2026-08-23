@@ -1,10 +1,10 @@
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
-import { getCacheOptions } from "./cookies"
+import { getPublicCacheOptions } from "./cookies"
 
 export const listCategories = async (query?: Record<string, unknown>) => {
   const next = {
-    ...(await getCacheOptions("categories")),
+    ...getPublicCacheOptions("categories"),
   }
 
   const limit = query?.limit || 100
@@ -14,8 +14,7 @@ export const listCategories = async (query?: Record<string, unknown>) => {
       "/store/product-categories",
       {
         query: {
-          fields:
-            "*category_children, *products, *parent_category, *parent_category.parent_category",
+          fields: "id,name,handle,parent_category_id",
           limit,
           ...query,
         },
@@ -30,7 +29,7 @@ export const getCategoryByHandle = async (categoryHandle: string[]) => {
   const handle = `${categoryHandle.join("/")}`
 
   const next = {
-    ...(await getCacheOptions("categories")),
+    ...getPublicCacheOptions("categories"),
   }
 
   return sdk.client

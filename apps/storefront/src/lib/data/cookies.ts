@@ -49,6 +49,12 @@ export const getCacheOptions = async (
   return { tags: [`${cacheTag}`] }
 }
 
+export const getPublicCacheOptions = (
+  tag: string
+): { tags: string[] } => {
+  return { tags: [tag] }
+}
+
 export const setAuthToken = async (token: string) => {
   const cookies = await nextCookies()
   cookies.set("_medusa_jwt", token, {

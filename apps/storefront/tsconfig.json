@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2025",
     "lib": [
       "dom",
       "dom.iterable",
@@ -18,16 +18,18 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "baseUrl": "./src",
     "paths": {
       "@lib/*": [
-        "lib/*"
+        "./src/lib/*"
       ],
       "@modules/*": [
-        "modules/*"
+        "./src/modules/*"
       ],
       "@pages/*": [
-        "pages/*"
+        "./src/pages/*"
+      ],
+      "@styles/*": [
+        "./src/styles/*"
       ]
     },
     "plugins": [

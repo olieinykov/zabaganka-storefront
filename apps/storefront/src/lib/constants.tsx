@@ -80,3 +80,6 @@ export const noDivisionCurrencies = [
   "xdr",
   "xau",
 ]
+
+export const PRODUCT_PREVIEW_FIELDS =
+  "id,title,handle,thumbnail,*images,*categories,+variants.id,*variants.calculated_price";

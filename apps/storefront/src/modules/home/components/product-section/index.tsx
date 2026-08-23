@@ -2,6 +2,7 @@ import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import ProductPreview from "@modules/products/components/product-preview"
 import SectionHeading from "@modules/home/components/section-heading"
+import { PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
 
 export default async function ProductSection({
   eyebrow,
@@ -17,7 +18,6 @@ export default async function ProductSection({
   title: string
   linkHref: string
   linkLabel: string
-  /** Small label chip rendered on each card, e.g. "Новинка" */
   badge?: string
   countryCode: string
   sortBy?: "-created_at" | "created_at"
@@ -33,7 +33,11 @@ export default async function ProductSection({
     response: { products },
   } = await listProducts({
     countryCode,
-    queryParams: { limit, ...(sortBy ? { order: sortBy } : {}) },
+    queryParams: {
+      limit,
+      fields: PRODUCT_PREVIEW_FIELDS,
+      ...(sortBy ? { order: sortBy } : {}),
+    },
   })
 
   if (!products.length) {

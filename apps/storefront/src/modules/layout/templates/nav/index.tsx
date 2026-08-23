@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 
 import { listCategories } from "@lib/data/categories"
+import { HttpTypes } from "@medusajs/types"
 import AnnouncementBar from "@modules/layout/components/announcement-bar"
 import CartButton from "@modules/layout/components/cart-button"
 import Logo from "@modules/layout/components/logo"
@@ -11,13 +12,23 @@ import Heart from "@modules/common/icons/heart"
 import Search from "@modules/common/icons/search"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
-export default async function Nav() {
-  const categories = await listCategories().catch(() => [])
+export default async function Nav({
+  categories: categoriesProp,
+}: {
+  /**
+   * Passed down from `(main)/layout.tsx`, which fetches categories once and
+   * shares the result with both Nav and Footer. Falls back to fetching on
+   * its own when rendered without the prop (e.g. in isolation/tests).
+   */
+  categories?: HttpTypes.StoreProductCategory[]
+} = {}) {
+  const categories =
+    categoriesProp ?? (await listCategories().catch(() => []))
 
   const navLinks: NavLink[] = [
     { name: "Усі товари", href: "/store?sortBy=created_at" },
     ...(categories || [])
-      .filter((c) => !c.parent_category)
+      .filter((c) => !c.parent_category_id)
       .slice(0, 6)
       .map((c) => ({ name: c.name, href: `/categories/${c.handle}` })),
   ]

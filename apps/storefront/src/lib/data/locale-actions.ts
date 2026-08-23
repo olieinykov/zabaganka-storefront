@@ -1,7 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import { revalidateTag } from "next/cache"
+import { updateTag } from "next/cache"
 import { cookies as nextCookies } from "next/headers"
 import { getAuthHeaders, getCacheTag, getCartId } from "./cookies"
 
@@ -48,27 +48,21 @@ export const updateLocale = async (localeCode: string): Promise<string> => {
 
     await sdk.store.cart.update(cartId, { locale: localeCode }, {}, headers)
 
+    // Cart is per-visitor data — this user just changed it, so they should
+    // see the change immediately: updateTag (read-your-writes), not
+    // revalidateTag.
     const cartCacheTag = await getCacheTag("carts")
     if (cartCacheTag) {
-      revalidateTag(cartCacheTag)
+      updateTag(cartCacheTag)
     }
   }
 
-  // Revalidate relevant caches to refresh content
-  const productsCacheTag = await getCacheTag("products")
-  if (productsCacheTag) {
-    revalidateTag(productsCacheTag)
-  }
-
-  const categoriesCacheTag = await getCacheTag("categories")
-  if (categoriesCacheTag) {
-    revalidateTag(categoriesCacheTag)
-  }
-
-  const collectionsCacheTag = await getCacheTag("collections")
-  if (collectionsCacheTag) {
-    revalidateTag(collectionsCacheTag)
-  }
+  // Products/categories/collections now use a single shared, public cache
+  // tag (see `getPublicCacheOptions` in `cookies.ts`) rather than one scoped
+  // per visitor, so we invalidate those tags directly by name.
+  updateTag("products")
+  updateTag("categories")
+  updateTag("collections")
 
   return localeCode
 }

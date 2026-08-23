@@ -1,10 +1,17 @@
 import { listCategories } from "@lib/data/categories"
+import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Logo from "@modules/layout/components/logo"
 
-export default async function Footer() {
-  const categories = (await listCategories().catch(() => [])) || []
-  const topLevelCategories = categories.filter((c) => !c.parent_category)
+export default async function Footer({
+  categories: categoriesProp,
+}: {
+  /** See Nav — shared fetch from `(main)/layout.tsx`, with a fallback. */
+  categories?: HttpTypes.StoreProductCategory[]
+} = {}) {
+  const categories =
+    categoriesProp ?? (await listCategories().catch(() => [])) ?? []
+  const topLevelCategories = categories.filter((c) => !c.parent_category_id)
 
   return (
     <footer className="w-full">
