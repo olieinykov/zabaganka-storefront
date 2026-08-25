@@ -27,6 +27,9 @@ module.exports = defineConfig({
   },
   modules: [
     {
+      resolve: './src/modules/page-content',
+    },
+    {
       resolve: '@medusajs/medusa/fulfillment',
       options: {
         providers: [

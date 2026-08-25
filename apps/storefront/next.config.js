@@ -9,6 +9,12 @@ const S3_HOSTNAME = process.env.MEDUSA_CLOUD_S3_HOSTNAME
 const S3_PATHNAME = process.env.MEDUSA_CLOUD_S3_PATHNAME
 
 /**
+ * Supabase Storage (S3-compatible) hostname, used by admin-uploaded page
+ * content images (Hero/GiftBanner/Instagram). E.g. "xyzcompany.supabase.co".
+ */
+const SUPABASE_S3_HOSTNAME = process.env.NEXT_PUBLIC_SUPABASE_S3_HOSTNAME
+
+/**
  * @type {import('next').NextConfig}
  */
 const nextConfig = {
@@ -42,6 +48,14 @@ const nextConfig = {
               protocol: "https",
               hostname: S3_HOSTNAME,
               pathname: S3_PATHNAME,
+            },
+          ]
+        : []),
+      ...(SUPABASE_S3_HOSTNAME
+        ? [
+            {
+              protocol: "https",
+              hostname: SUPABASE_S3_HOSTNAME,
             },
           ]
         : []),

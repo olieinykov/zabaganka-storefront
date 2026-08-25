@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 
 import { COUNTRY_CODE } from "@lib/constants"
+import { getPageContent } from "@lib/data/page-content"
 import CategoryGrid from "@modules/home/components/category-grid"
 import CtaSection from "@modules/home/components/cta-section"
 import GiftBanner from "@modules/home/components/gift-banner"
@@ -17,10 +18,12 @@ export const metadata: Metadata = {
 }
 
 export default async function Home() {
+  const content = await getPageContent("home")
+
   return (
     <>
-      <Hero />
-      <CategoryGrid />
+      <Hero content={content.hero} />
+      <CategoryGrid content={content.category_grid} />
       <ProductSection
         eyebrow="Щойно додано"
         title="Новинки"
@@ -30,7 +33,7 @@ export default async function Home() {
         countryCode={COUNTRY_CODE}
         sortBy="-created_at"
       />
-      <GiftBanner />
+      <GiftBanner content={content.gift_banner} />
       <ProductSection
         eyebrow="Вибір покупців"
         title="Популярні вироби"
@@ -38,10 +41,10 @@ export default async function Home() {
         linkLabel="Дивитися більше"
         countryCode={COUNTRY_CODE}
       />
-      <WhyUs />
+      <WhyUs content={content.why_us} />
       <Testimonials />
-      <InstagramSection />
-      <CtaSection />
+      <InstagramSection content={content.instagram_section} />
+      <CtaSection content={content.cta_section} />
     </>
   )
 }
