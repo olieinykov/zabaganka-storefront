@@ -81,7 +81,7 @@ const PageContentPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Контент сторінок",
+  label: "Page content",
   icon: PencilSquare,
 })
 
