@@ -16,11 +16,6 @@ import {
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
 
-/**
- * Retrieves a cart by its ID. If no ID is provided, it will use the cart ID from the cookies.
- * @param cartId - optional - The ID of the cart to retrieve.
- * @returns The cart object if found, or null if not found.
- */
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields ??=
@@ -59,7 +54,12 @@ export async function getOrSetCart(countryCode: string) {
     throw new Error(`Region not found for country code: ${countryCode}`)
   }
 
-  let cart = await retrieveCart(undefined, "id,region_id")
+  let cart = await retrieveCart(undefined, "id,region_id,completed_at")
+
+  if (cart && (cart as unknown as { completed_at?: string | null }).completed_at) {
+    await removeCartId()
+    cart = null
+  }
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -214,7 +214,16 @@ export async function deleteLineItem(lineId: string) {
       const fulfillmentCacheTag = await getCacheTag("fulfillment")
       updateTag(fulfillmentCacheTag)
     })
-    .catch(medusaError)
+    .catch(async (err) => {
+      const message = err?.message ?? String(err)
+      if (/already completed/i.test(message)) {
+        await removeCartId()
+        throw new Error(
+          "Це замовлення вже оформлено. Оновіть сторінку, щоб почати новий кошик."
+        )
+      }
+      medusaError(err)
+    })
 }
 
 export async function setShippingMethod({
@@ -244,18 +253,6 @@ export async function setShippingMethod({
     .catch(medusaError)
 }
 
-/**
- * Persists the chosen Nova Poshta / Ukrposhta delivery destination (city +
- * warehouse, or courier details) onto the cart's `metadata.delivery` field.
- *
- * `sdk.store.cart.update` merges metadata per top-level key (Medusa doesn't
- * replace `metadata` wholesale), so this only ever touches the `delivery`
- * key and leaves any other metadata the cart may have untouched.
- *
- * This metadata is automatically carried over to `order.metadata` when the
- * cart is completed (see `completeCartWorkflow` in `@medusajs/medusa/core-flows`,
- * and the defensive `order-delivery-metadata` subscriber on the backend).
- */
 export async function setCartDeliveryMetadata(
   cartId: string,
   delivery: Record<string, unknown>
@@ -421,11 +418,6 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
   redirect(`/checkout?step=delivery`)
 }
 
-/**
- * Places an order for a cart. If no cart ID is provided, it will use the cart ID from the cookies.
- * @param cartId - optional - The ID of the cart to place an order for.
- * @returns The cart object if the order was successful, or null if not.
- */
 export async function placeOrder(cartId?: string) {
   const id = cartId || (await getCartId())
 

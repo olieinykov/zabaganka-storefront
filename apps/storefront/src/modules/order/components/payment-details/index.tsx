@@ -1,16 +1,31 @@
 import { Container, Heading, Text } from "@modules/common/components/ui"
 
-import { isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isMono, isStripeLike, paymentInfoMap } from "@lib/constants"
 import Divider from "@modules/common/components/divider"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
+
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
 
 type PaymentDetailsProps = {
   order: HttpTypes.StoreOrder
 }
 
-const PaymentDetails = ({ order }: PaymentDetailsProps) => {
+const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
   const payment = order.payment_collections?.[0].payments?.[0]
+
+  const fiscalCheck =
+    payment && isMono(payment.provider_id)
+      ? await fetch(
+          `${BACKEND_URL}/store/payments/mono/fiscal-check?order_id=${encodeURIComponent(
+            order.id
+          )}`,
+          { cache: "no-store" }
+        )
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      : null
 
   return (
     <div>
@@ -50,6 +65,28 @@ const PaymentDetails = ({ order }: PaymentDetailsProps) => {
                       ).toLocaleString()}`}
                 </Text>
               </div>
+              {isMono(payment.provider_id) && (
+                <a
+                  href={`${BACKEND_URL}/store/payments/mono/receipt?order_id=${encodeURIComponent(
+                    order.id
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-small-regular text-ui-fg-interactive underline mt-2 inline-block"
+                >
+                  Завантажити квитанцію (PDF)
+                </a>
+              )}
+              {fiscalCheck?.available && (
+                <a
+                  href={fiscalCheck.tax_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-small-regular text-ui-fg-interactive underline mt-1 inline-block"
+                >
+                  Переглянути фіскальний чек
+                </a>
+              )}
             </div>
           </div>
         )}

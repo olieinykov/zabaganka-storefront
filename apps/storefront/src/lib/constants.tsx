@@ -1,18 +1,13 @@
 import { CreditCard } from "@medusajs/icons"
 import Bancontact from "@modules/common/icons/bancontact"
 import Ideal from "@modules/common/icons/ideal"
+import Mono from "@modules/common/icons/mono"
 import PayPal from "@modules/common/icons/paypal"
 import React from "react"
 
-/**
- * The store only operates within Ukraine, so there's a single, fixed
- * region/country — no need to route by `[countryCode]` or detect the
- * visitor's location. Used anywhere a Medusa API call needs a country code
- * to resolve pricing/region (getRegion, listProducts, addToCart, etc).
- */
+
 export const COUNTRY_CODE = "ua"
 
-/* Map of payment provider_id to their title and icon. Add in any payment providers you want to use. */
 export const paymentInfoMap: Record<
   string,
   { title: string; icon: React.JSX.Element }
@@ -37,14 +32,16 @@ export const paymentInfoMap: Record<
     title: "PayPal",
     icon: <PayPal />,
   },
+  pp_mono_mono: {
+    title: "Plata by mono",
+    icon: <Mono />,
+  },
   pp_system_default: {
     title: "Manual Payment",
     icon: <CreditCard />,
   },
-  // Add more payment providers here
 }
 
-// This only checks if it is native stripe or medusa payments for card payments, it ignores the other stripe-based providers
 export const isStripeLike = (providerId?: string) => {
   return (
     providerId?.startsWith("pp_stripe_") || providerId?.startsWith("pp_medusa-")
@@ -57,8 +54,10 @@ export const isPaypal = (providerId?: string) => {
 export const isManual = (providerId?: string) => {
   return providerId?.startsWith("pp_system_default")
 }
+export const isMono = (providerId?: string) => {
+  return providerId?.startsWith("pp_mono_")
+}
 
-// Add currencies that don't need to be divided by 100
 export const noDivisionCurrencies = [
   "krw",
   "jpy",

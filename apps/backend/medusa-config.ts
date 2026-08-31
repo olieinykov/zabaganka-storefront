@@ -49,8 +49,6 @@ module.exports = defineConfig({
       resolve: '@medusajs/medusa/fulfillment',
       options: {
         providers: [
-          // Medusa's default manual provider, kept so existing/admin-only
-          // fulfillment flows keep working.
           {
             resolve: '@medusajs/medusa/fulfillment-manual',
             id: 'manual',
@@ -94,6 +92,27 @@ module.exports = defineConfig({
             },
           },
         }],
+      },
+    },
+    {
+      resolve: "@medusajs/medusa/payment",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/mono-payment",
+            id: "mono",
+            options: {
+              token: process.env.MONO_TOKEN,
+              apiBaseUrl: process.env.MONO_API_BASE_URL,
+              redirectUrl: process.env.MONO_REDIRECT_URL,
+              webhookUrl: process.env.MONO_WEBHOOK_URL,
+              validitySeconds: process.env.MONO_VALIDITY_SECONDS
+                ? Number(process.env.MONO_VALIDITY_SECONDS)
+                : undefined,
+              paymentType: (process.env.MONO_PAYMENT_TYPE || undefined) as "debit" | "hold" | undefined,
+            },
+          },
+        ],
       },
     },
     {

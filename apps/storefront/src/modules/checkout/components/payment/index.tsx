@@ -1,7 +1,8 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
-import { isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isMono, isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
+import { isMonoSessionStillPayable } from "@lib/data/mono"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
@@ -83,8 +84,12 @@ const Payment = ({
       const shouldInputCard =
         isStripeLike(selectedPaymentMethod) && !activeSession
 
-      const checkActiveSession =
+      let checkActiveSession =
         activeSession?.provider_id === selectedPaymentMethod
+
+      if (checkActiveSession && activeSession && isMono(selectedPaymentMethod)) {
+        checkActiveSession = await isMonoSessionStillPayable(activeSession.id)
+      }
 
       if (!checkActiveSession) {
         await initiatePaymentSession(cart, {

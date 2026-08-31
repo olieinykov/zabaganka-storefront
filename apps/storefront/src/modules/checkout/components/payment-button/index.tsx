@@ -1,6 +1,6 @@
 "use client"
 
-import { isManual, isStripeLike } from "@lib/constants"
+import { isManual, isMono, isStripeLike } from "@lib/constants"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -38,6 +38,14 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     case isManual(paymentSession?.provider_id):
       return (
         <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+      )
+    case isMono(paymentSession?.provider_id):
+      return (
+        <MonoPaymentButton
+          notReady={notReady}
+          session={paymentSession}
+          data-testid={dataTestId}
+        />
       )
     default:
       return <Button disabled>Виберіть спосіб оплати</Button>
@@ -146,6 +154,54 @@ const StripePaymentButton = ({
       <ErrorMessage
         error={errorMessage}
         data-testid="stripe-payment-error-message"
+      />
+    </>
+  )
+}
+
+const MonoPaymentButton = ({
+  notReady,
+  session,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  session?: HttpTypes.StorePaymentSession
+  "data-testid"?: string
+}) => {
+  const [redirecting, setRedirecting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const pageUrl = (session?.data as Record<string, unknown> | undefined)
+    ?.page_url as string | undefined
+
+  const handlePayment = () => {
+    setErrorMessage(null)
+
+    if (!pageUrl) {
+      setErrorMessage(
+        "Не вдалося отримати посилання на оплату. Спробуйте оновити сторінку."
+      )
+      return
+    }
+
+    setRedirecting(true)
+    window.location.href = pageUrl
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady || !pageUrl}
+        onClick={handlePayment}
+        size="large"
+        isLoading={redirecting}
+        data-testid={dataTestId}
+      >
+        Перейти до оплати
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="mono-payment-error-message"
       />
     </>
   )
