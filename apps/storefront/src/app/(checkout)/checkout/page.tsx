@@ -18,7 +18,7 @@ type Props = {
 export default async function Checkout({ searchParams }: Props) {
   const cart = await retrieveCart()
 
-  if (!cart) {
+  if (!cart || (cart.items?.length ?? 0) === 0) {
     return notFound()
   }
 

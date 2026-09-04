@@ -124,7 +124,7 @@ module.exports = defineConfig({
               token: process.env.MONO_TOKEN,
               apiBaseUrl: process.env.MONO_API_BASE_URL,
               redirectUrl: process.env.MONO_REDIRECT_URL,
-              webhookUrl: process.env.MONO_WEBHOOK_URL, 
+              webhookUrl: process.env.MONO_WEBHOOK_URL,
               validitySeconds: process.env.MONO_VALIDITY_SECONDS
                 ? Number(process.env.MONO_VALIDITY_SECONDS)
                 : undefined, // default 1800 (30 min)
