@@ -3,6 +3,7 @@ import { MedusaError } from "@medusajs/framework/utils"
 import { PAGE_CONTENT_MODULE } from "../../../../modules/page-content"
 import PageContentModuleService from "../../../../modules/page-content/service"
 import { upsertPageContentBlockWorkflow } from "../../../../workflows/upsert-page-content-block"
+import { notifyStorefrontRevalidate } from "../../../../lib/notify-storefront-revalidate"
 import {
   HomeBlockKey,
   PageKey,
@@ -79,7 +80,7 @@ export async function POST(
     }
   )
 
-  void notifyStorefrontRevalidate(page)
+  void notifyStorefrontRevalidate(`page-content-${page}`)
 
   res.json({
     block: {
@@ -90,22 +91,4 @@ export async function POST(
       is_customized: true,
     },
   })
-}
-
-async function notifyStorefrontRevalidate(page: string) {
-  const url = process.env.STOREFRONT_URL
-  const secret = process.env.REVALIDATE_SECRET
-  if (!url || !secret) {
-    return
-  }
-
-  try {
-    await fetch(
-      `${url.replace(/\/$/, "")}/api/revalidate?secret=${encodeURIComponent(
-        secret
-      )}&tag=${encodeURIComponent(`page-content-${page}`)}`,
-      { method: "POST" }
-    )
-  } catch {
-  }
 }

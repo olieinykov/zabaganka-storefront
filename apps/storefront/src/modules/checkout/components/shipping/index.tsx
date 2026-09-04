@@ -2,6 +2,11 @@
 import { Radio, RadioGroup } from "@headlessui/react"
 import { setCartDeliveryMetadata, setShippingMethod } from "@lib/data/cart"
 import { calculatePriceForShippingOption } from "@lib/data/fulfillment"
+import {
+  estimatesExceedPostomat,
+  fetchPostomatLimits,
+  type PostomatLimits,
+} from "@lib/util/postomat-capacity"
 import { convertToLocale } from "@lib/util/money"
 import { CheckCircleSolid, Loader } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
@@ -103,6 +108,16 @@ const Shipping: React.FC<ShippingProps> = ({
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
   )
+
+  const [postomatLimits, setPostomatLimits] = useState<PostomatLimits | null>(null)
+  useEffect(() => {
+    fetchPostomatLimits()
+      .then(setPostomatLimits)
+      .catch(() => setPostomatLimits(null))
+  }, [])
+  const exceedsPostomat = postomatLimits
+    ? estimatesExceedPostomat(cart.items, postomatLimits)
+    : false
 
   // When the customer selects a Nova Poshta / Ukrposhta shipping option that
   // requires a destination (warehouse, postomat, or a courier comment), we
@@ -419,10 +434,16 @@ const Shipping: React.FC<ShippingProps> = ({
                   }}
                 >
                   {_shippingMethods?.map((option) => {
+                    const optionData = option.data as CarrierOptionData | undefined
+                    const isPostomat =
+                      optionData?.carrier === "nova-poshta" && optionData?.type === "postomat"
+                    const isTooBigForPostomat = isPostomat && exceedsPostomat
+
                     const isDisabled =
-                      option.price_type === "calculated" &&
-                      !isLoadingPrices &&
-                      typeof calculatedPricesMap[option.id] !== "number"
+                      isTooBigForPostomat ||
+                      (option.price_type === "calculated" &&
+                        !isLoadingPrices &&
+                        typeof calculatedPricesMap[option.id] !== "number")
 
                     return (
                       <Radio
@@ -430,12 +451,17 @@ const Shipping: React.FC<ShippingProps> = ({
                         value={option.id}
                         data-testid="delivery-option-radio"
                         disabled={isDisabled}
+                        title={
+                          isTooBigForPostomat
+                            ? "Замовлення завелике для поштомата — оберіть відділення або кур'єра"
+                            : undefined
+                        }
                         className={clx(
                           "flex items-center justify-between text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
                           {
                             "border-ui-border-interactive":
                               option.id === shippingMethodId,
-                            "hover:shadow-brders-none cursor-not-allowed":
+                            "hover:shadow-brders-none cursor-not-allowed opacity-50":
                               isDisabled,
                           }
                         )}
@@ -446,10 +472,17 @@ const Shipping: React.FC<ShippingProps> = ({
                           />
                           <span className="text-base-regular">
                             {option.name}
+                            {isTooBigForPostomat && (
+                              <span className="block text-ui-fg-muted txt-small">
+                                Замовлення не поміщається у поштомат
+                              </span>
+                            )}
                           </span>
                         </div>
                         <span className="justify-self-end text-ui-fg-base">
-                          {option.price_type === "flat" ? (
+                          {isTooBigForPostomat ? (
+                            "-"
+                          ) : option.price_type === "flat" ? (
                             convertToLocale({
                               amount: option.amount!,
                               currency_code: cart?.currency_code,

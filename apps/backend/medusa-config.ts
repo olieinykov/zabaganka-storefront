@@ -59,6 +59,25 @@ module.exports = defineConfig({
             options: {
               apiKey: process.env.NOVA_POSHTA_API_KEY,
               senderCityRef: process.env.NOVA_POSHTA_SENDER_CITY_REF,
+              defaultItemWeightKg: process.env.NOVA_POSHTA_DEFAULT_ITEM_WEIGHT_KG
+                ? Number(process.env.NOVA_POSHTA_DEFAULT_ITEM_WEIGHT_KG)
+                : undefined,
+              defaultItemDimensionCm: process.env.NOVA_POSHTA_DEFAULT_ITEM_DIMENSION_CM
+                ? Number(process.env.NOVA_POSHTA_DEFAULT_ITEM_DIMENSION_CM)
+                : undefined,
+              postomatMaxWeightKg: process.env.NOVA_POSHTA_POSTOMAT_MAX_WEIGHT_KG
+                ? Number(process.env.NOVA_POSHTA_POSTOMAT_MAX_WEIGHT_KG)
+                : undefined,
+              postomatMaxDimensionsCm:
+                process.env.NOVA_POSHTA_POSTOMAT_MAX_LENGTH_CM &&
+                process.env.NOVA_POSHTA_POSTOMAT_MAX_WIDTH_CM &&
+                process.env.NOVA_POSHTA_POSTOMAT_MAX_HEIGHT_CM
+                  ? {
+                      length: Number(process.env.NOVA_POSHTA_POSTOMAT_MAX_LENGTH_CM),
+                      width: Number(process.env.NOVA_POSHTA_POSTOMAT_MAX_WIDTH_CM),
+                      height: Number(process.env.NOVA_POSHTA_POSTOMAT_MAX_HEIGHT_CM),
+                    }
+                  : undefined,
             },
           },
           {
@@ -105,12 +124,31 @@ module.exports = defineConfig({
               token: process.env.MONO_TOKEN,
               apiBaseUrl: process.env.MONO_API_BASE_URL,
               redirectUrl: process.env.MONO_REDIRECT_URL,
-              webhookUrl: process.env.MONO_WEBHOOK_URL,
+              webhookUrl: process.env.MONO_WEBHOOK_URL, 
+              validitySeconds: process.env.MONO_VALIDITY_SECONDS
+                ? Number(process.env.MONO_VALIDITY_SECONDS)
+                : undefined, // default 1800 (30 min)
+              paymentType: (process.env.MONO_PAYMENT_TYPE || undefined) as "debit" | "hold" | undefined,
+            },
+          },
+          {
+            resolve: "./src/modules/mono-prepayment",
+            id: "mono-prepayment",
+            options: {
+              token: process.env.MONO_TOKEN,
+              apiBaseUrl: process.env.MONO_API_BASE_URL,
+              redirectUrl: process.env.MONO_PREPAYMENT_REDIRECT_URL || process.env.MONO_REDIRECT_URL,
+              webhookUrl: process.env.MONO_PREPAYMENT_WEBHOOK_URL,
               validitySeconds: process.env.MONO_VALIDITY_SECONDS
                 ? Number(process.env.MONO_VALIDITY_SECONDS)
                 : undefined,
               paymentType: (process.env.MONO_PAYMENT_TYPE || undefined) as "debit" | "hold" | undefined,
             },
+          },
+          {
+            resolve: "./src/modules/cod-payment",
+            id: "cod",
+            options: {},
           },
         ],
       },

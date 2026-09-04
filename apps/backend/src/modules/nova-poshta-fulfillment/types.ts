@@ -1,13 +1,3 @@
-/**
- * Types for the Nova Poshta ("Нова Пошта") integration.
- *
- * Reference: Nova Poshta API 2.0 (public, real, documented API)
- * https://developers.novaposhta.ua/
- *
- * The API is a single JSON-RPC-like endpoint: POST https://api.novaposhta.ua/v2.0/json/
- * with a body of { apiKey, modelName, calledMethod, methodProperties }.
- */
-
 export type NovaPoshtaOptions = {
   /** Nova Poshta API key (from the counterparty's cabinet, https://new.novaposhta.ua). */
   apiKey: string
@@ -18,6 +8,30 @@ export type NovaPoshtaOptions = {
    * flat/fallback price configured on the shipping option is used.
    */
   senderCityRef?: string
+  /**
+   * Fallback weight (kg) used per unit when a variant has no `weight` set.
+   * Missing weight is a data-quality problem (fix it on the product in
+   * Admin), this is only a safety net so pricing doesn't outright fail.
+   */
+  defaultItemWeightKg?: number
+  /**
+   * Fallback per-axis dimension (cm) used when a variant has no
+   * length/width/height set. Same rationale as defaultItemWeightKg.
+   */
+  defaultItemDimensionCm?: number
+  /**
+   * Maximum overall parcel dimensions (cm, L×W×H after our box-fitting
+   * calculation — see calculatePrice) and weight (kg) that fit in a Nova
+   * Poshta postomat cell. This varies by postomat generation/cell size in
+   * practice, so it's intentionally configurable rather than hardcoded —
+   * set it to the smallest guarantee you're comfortable with, or to the
+   * largest cell size your target postomats support if you're fine with
+   * some orders needing a bigger locker.
+   * Defaults to Nova Poshta's standard largest publicly listed postomat
+   * cell (~40×38×40 cm, 20 kg) if not set.
+   */
+  postomatMaxDimensionsCm?: { length: number; width: number; height: number }
+  postomatMaxWeightKg?: number
 }
 
 export type NovaPoshtaCity = {

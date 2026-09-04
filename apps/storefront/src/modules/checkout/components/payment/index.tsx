@@ -1,8 +1,10 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
-import { isMono, isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isMono, isMonoPrepayment, isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { isMonoSessionStillPayable } from "@lib/data/mono"
+import { fetchPrepaymentSettings } from "@lib/data/checkout-options"
+import { convertToLocale } from "@lib/util/money"
 import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
@@ -38,6 +40,8 @@ const Payment = ({
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(
     activeSession?.provider_id ?? ""
   )
+  const [prepaymentAmount, setPrepaymentAmount] = useState<number | null>(null)
+  const [prepaymentError, setPrepaymentError] = useState<string | null>(null)
 
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -87,6 +91,7 @@ const Payment = ({
       let checkActiveSession =
         activeSession?.provider_id === selectedPaymentMethod
 
+      
       if (checkActiveSession && activeSession && isMono(selectedPaymentMethod)) {
         checkActiveSession = await isMonoSessionStillPayable(activeSession.id)
       }
@@ -115,6 +120,32 @@ const Payment = ({
   useEffect(() => {
     setError(null)
   }, [isOpen])
+
+ 
+  useEffect(() => {
+    if (!isMonoPrepayment(selectedPaymentMethod)) {
+      setPrepaymentAmount(null)
+      setPrepaymentError(null)
+      return
+    }
+
+    let cancelled = false
+    fetchPrepaymentSettings()
+      .then(({ amount }) => {
+        if (!cancelled) setPrepaymentAmount(amount)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPrepaymentError(
+            "Не вдалося отримати суму передоплати. Спробуйте оновити сторінку."
+          )
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedPaymentMethod])
 
   return (
     <div className="bg-ivory">
@@ -173,6 +204,50 @@ const Payment = ({
                   </div>
                 ))}
               </RadioGroup>
+
+              {isMonoPrepayment(selectedPaymentMethod) && (
+                <Container className="mt-4 p-4 bg-ui-button-neutral-hover">
+                  {prepaymentError ? (
+                    <Text className="text-ui-fg-error">{prepaymentError}</Text>
+                  ) : prepaymentAmount === null ? (
+                    <Text className="text-ui-fg-subtle">
+                      Завантаження суми передоплати…
+                    </Text>
+                  ) : (
+                    <div className="flex flex-col gap-y-1">
+                      <div className="flex justify-between">
+                        <Text className="text-ui-fg-subtle">Загальна сума замовлення</Text>
+                        <Text className="txt-medium-plus">
+                          {convertToLocale({
+                            amount: cart.total ?? 0,
+                            currency_code: cart.currency_code,
+                          })}
+                        </Text>
+                      </div>
+                      <div className="flex justify-between">
+                        <Text className="text-ui-fg-subtle">Сплатити зараз (передоплата)</Text>
+                        <Text className="txt-medium-plus">
+                          {convertToLocale({
+                            amount: prepaymentAmount,
+                            currency_code: cart.currency_code,
+                          })}
+                        </Text>
+                      </div>
+                      <div className="flex justify-between">
+                        <Text className="text-ui-fg-subtle">
+                          Доплата при отриманні
+                        </Text>
+                        <Text className="txt-medium-plus">
+                          {convertToLocale({
+                            amount: Math.max((cart.total ?? 0) - prepaymentAmount, 0),
+                            currency_code: cart.currency_code,
+                          })}
+                        </Text>
+                      </div>
+                    </div>
+                  )}
+                </Container>
+              )}
             </>
           )}
 
@@ -202,7 +277,8 @@ const Payment = ({
             isLoading={isLoading}
             disabled={
               (isStripeLike(selectedPaymentMethod) && !cardComplete) ||
-              (!selectedPaymentMethod && !paidByGiftcard)
+              (!selectedPaymentMethod && !paidByGiftcard) ||
+              (isMonoPrepayment(selectedPaymentMethod) && !!prepaymentError)
             }
             data-testid="submit-payment-button"
           >

@@ -1,6 +1,6 @@
 "use client"
 
-import { isManual, isMono, isStripeLike } from "@lib/constants"
+import { isCod, isManual, isMono, isStripeLike } from "@lib/constants"
 import { placeOrder } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import { Button } from "@modules/common/components/ui"
@@ -38,6 +38,10 @@ const PaymentButton: React.FC<PaymentButtonProps> = ({
     case isManual(paymentSession?.provider_id):
       return (
         <ManualTestPaymentButton notReady={notReady} data-testid={dataTestId} />
+      )
+    case isCod(paymentSession?.provider_id):
+      return (
+        <CodPaymentButton notReady={notReady} data-testid={dataTestId} />
       )
     case isMono(paymentSession?.provider_id):
       return (
@@ -241,6 +245,47 @@ const ManualTestPaymentButton = ({ notReady }: { notReady: boolean }) => {
       <ErrorMessage
         error={errorMessage}
         data-testid="manual-payment-error-message"
+      />
+    </>
+  )
+}
+
+const CodPaymentButton = ({
+  notReady,
+  "data-testid": dataTestId,
+}: {
+  notReady: boolean
+  "data-testid"?: string
+}) => {
+  const [submitting, setSubmitting] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  const handlePayment = () => {
+    setSubmitting(true)
+
+    placeOrder()
+      .catch((err) => {
+        setErrorMessage(err.message)
+      })
+      .finally(() => {
+        setSubmitting(false)
+      })
+  }
+
+  return (
+    <>
+      <Button
+        disabled={notReady}
+        isLoading={submitting}
+        onClick={handlePayment}
+        size="large"
+        data-testid={dataTestId}
+      >
+        Розмістити замовлення
+      </Button>
+      <ErrorMessage
+        error={errorMessage}
+        data-testid="cod-payment-error-message"
       />
     </>
   )

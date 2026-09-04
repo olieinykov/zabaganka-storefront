@@ -26,7 +26,7 @@ export async function getPageContent(
       method: "GET",
       query: { page },
       next: { tags: [`page-content-${page}`], revalidate: 300 },
-      cache: "force-cache",
+      cache: "no-cache",
     })
 
     return {

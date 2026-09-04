@@ -13,7 +13,20 @@ type PaymentDetailsProps = {
 }
 
 const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
-  const payment = order.payment_collections?.[0].payments?.[0]
+  const paymentCollection = order.payment_collections?.[0]
+  const payment = paymentCollection?.payments?.[0]
+  const total = order.total ?? paymentCollection?.amount ?? payment?.amount ?? 0
+  const captured =
+    (paymentCollection as unknown as { captured_amount?: number })?.captured_amount ?? 0
+  const isFullyCaptured = captured >= total && total > 0
+  const isPartiallyCaptured = captured > 0 && !isFullyCaptured
+  const formatMoney = (amount: number) =>
+    convertToLocale({
+      amount,
+      currency_code: order.currency_code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
 
   const fiscalCheck =
     payment && isMono(payment.provider_id)
@@ -57,13 +70,28 @@ const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
                 <Text data-testid="payment-amount">
                   {isStripeLike(payment.provider_id) && payment.data?.card_last4
                     ? `**** **** **** ${payment.data.card_last4}`
-                    : `${convertToLocale({
-                        amount: payment.amount,
+                    : isFullyCaptured
+                    ? `${convertToLocale({
+                        amount: captured,
                         currency_code: order.currency_code,
                       })} сплачено о ${new Date(
                         payment.created_at ?? ""
-                      ).toLocaleString()}`}
+                      ).toLocaleString()}`
+                    : isPartiallyCaptured
+                    ? `Передоплата ${formatMoney(captured)} сплачена о ${new Date(
+                        payment.created_at ?? ""
+                      ).toLocaleString()}`
+                    : `Очікує оплати — до сплати ${convertToLocale({
+                        amount: total,
+                        currency_code: order.currency_code,
+                      })}`}
                 </Text>
+                {isPartiallyCaptured && (
+                  <Text className="text-ui-fg-subtle" data-testid="payment-outstanding">
+                    Доплата при отриманні:{" "}
+                    {formatMoney(Math.max(total - captured, 0))}
+                  </Text>
+                )}
               </div>
               {isMono(payment.provider_id) && (
                 <a

@@ -4,6 +4,7 @@ import { placeOrder } from "@lib/data/cart"
 import { fetchMonoStatus, type MonoStatusResponse } from "@lib/data/mono"
 import { Button, Heading, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
+import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 const POLL_INTERVAL_MS = 2500
@@ -21,6 +22,7 @@ function isNextRedirectError(err: unknown): boolean {
 }
 
 export default function MonoReturnClient({ sessionId }: { sessionId: string }) {
+  const router = useRouter()
   const [view, setView] = useState<ViewState>("checking")
   const [failureReason, setFailureReason] = useState<string | null>(null)
   const [orderId, setOrderId] = useState<string | null>(null)
@@ -28,8 +30,8 @@ export default function MonoReturnClient({ sessionId }: { sessionId: string }) {
   const cancelled = useRef(false)
 
   const completeWithOrder = useCallback((id: string) => {
-    window.location.href = `/order/${id}/confirmed`
-  }, [])
+    router.replace(`/order/${id}/confirmed`)
+  }, [router])
 
   const tryPlaceOrder = useCallback(
     async (data: MonoStatusResponse) => {

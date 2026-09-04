@@ -2,7 +2,7 @@
 
 import { sdk } from "@lib/config"
 import medusaError from "@lib/util/medusa-error"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { getAuthHeaders, getCacheOptions, getPublicCacheOptions } from "./cookies"
 import { HttpTypes } from "@medusajs/types"
 
 export const retrieveOrder = async (id: string) => {
@@ -11,7 +11,8 @@ export const retrieveOrder = async (id: string) => {
   }
 
   const next = {
-    ...(await getCacheOptions("orders")),
+    ...getPublicCacheOptions(`orders-${id}`),
+    revalidate: 15,
   }
 
   return sdk.client
@@ -19,11 +20,11 @@ export const retrieveOrder = async (id: string) => {
       method: "GET",
       query: {
         fields:
-          "*payment_collections.payments,*items,*items.metadata,*items.variant,*items.product",
+          "id,display_id,email,created_at,currency_code,fulfillment_status,payment_status,total,subtotal,item_subtotal,shipping_subtotal,discount_subtotal,tax_total,discount_total,gift_card_total,*shipping_address,*shipping_methods,shipping_methods.name,shipping_methods.total,*items,*items.metadata,*items.variant,*items.product,items.thumbnail,items.product_title,items.quantity,items.total,items.original_total,*payment_collections,*payment_collections.payments,payment_collections.amount,payment_collections.captured_amount,payment_collections.refunded_amount,payment_collections.status",
       },
       headers,
       next,
-      cache: "force-cache",
+      cache: "no-cache",
     })
     .then(({ order }) => order)
     .catch((err) => medusaError(err))
@@ -40,6 +41,7 @@ export const listOrders = async (
 
   const next = {
     ...(await getCacheOptions("orders")),
+    revalidate: 15,
   }
 
   return sdk.client

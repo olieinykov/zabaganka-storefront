@@ -8,15 +8,7 @@ import {
 
 const NP_API_URL = "https://api.novaposhta.ua/v2.0/json/"
 
-/**
- * Thin wrapper around the real, public Nova Poshta API 2.0.
- *
- * This client is intentionally the ONLY place that knows the Nova Poshta
- * API key. It is used both by the fulfillment provider service (server-side,
- * for price calculation and validation) and by the `/store/delivery/nova-poshta/*`
- * API routes (server-side, to power the storefront's city/warehouse autocomplete)
- * so the API key never reaches the browser.
- */
+
 export class NovaPoshtaClient {
   private apiKey: string
 
@@ -70,10 +62,7 @@ export class NovaPoshtaClient {
     return json.data
   }
 
-  /**
-   * Search cities/settlements by a free-text query.
-   * Uses Address.getCities (Ref/FindByString/Page/Limit).
-   */
+
   async getCities(query: string, limit = 20) {
     return this.request<NPCitiesResponse["data"][number]>("Address", "getCities", {
       FindByString: query,
@@ -82,11 +71,7 @@ export class NovaPoshtaClient {
     })
   }
 
-  /**
-   * List warehouses (branches/postomats) for a given city ref, optionally
-   * filtered by a free-text query and/or warehouse type ref (e.g. postomats).
-   * Uses AddressGeneral.getWarehouses.
-   */
+
   async getWarehouses(params: {
     cityRef: string
     query?: string
@@ -108,10 +93,7 @@ export class NovaPoshtaClient {
     )
   }
 
-  /**
-   * Calculate delivery cost. Uses InternetDocument.getDocumentPrice.
-   * ServiceType: "WarehouseWarehouse" | "WarehouseDoors" | "DoorsWarehouse" | "DoorsDoors"
-   */
+
   async getDocumentPrice(params: {
     citySender: string
     cityRecipient: string
@@ -120,6 +102,13 @@ export class NovaPoshtaClient {
     cost: number
     cargoType?: string
     seatsAmount?: number
+    optionsSeat?: Array<{
+      weight: number
+      volumetricLength: number
+      volumetricWidth: number
+      volumetricHeight: number
+      packRef?: string
+    }>
   }) {
     const data = await this.request<NPDocumentPriceResponse["data"][number]>(
       "InternetDocument",
@@ -132,6 +121,17 @@ export class NovaPoshtaClient {
         Cost: String(params.cost),
         CargoType: params.cargoType || "Cargo",
         SeatsAmount: String(params.seatsAmount ?? 1),
+        ...(params.optionsSeat?.length
+          ? {
+              OptionsSeat: params.optionsSeat.map((seat) => ({
+                weight: seat.weight,
+                volumetricLength: seat.volumetricLength,
+                volumetricWidth: seat.volumetricWidth,
+                volumetricHeight: seat.volumetricHeight,
+                ...(seat.packRef ? { packRef: seat.packRef } : {}),
+              })),
+            }
+          : {}),
       }
     )
 

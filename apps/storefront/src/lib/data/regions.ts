@@ -7,6 +7,7 @@ import { getPublicCacheOptions } from "./cookies"
 export const listRegions = async () => {
   const next = {
     ...getPublicCacheOptions("regions"),
+    revalidate: 120,
   }
 
   return await sdk.client
@@ -21,6 +22,7 @@ export const listRegions = async () => {
 export const retrieveRegion = async (id: string) => {
   const next = {
     ...getPublicCacheOptions(["regions", id].join("-")),
+    revalidate: 120,
   }
 
   return await sdk.client

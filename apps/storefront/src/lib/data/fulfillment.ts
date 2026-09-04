@@ -2,7 +2,7 @@
 
 import { sdk } from "@lib/config"
 import { HttpTypes } from "@medusajs/types"
-import { getAuthHeaders, getCacheOptions } from "./cookies"
+import { getAuthHeaders, getPublicCacheOptions } from "./cookies"
 
 export const listCartShippingMethods = async (cartId: string) => {
   const headers = {
@@ -10,7 +10,8 @@ export const listCartShippingMethods = async (cartId: string) => {
   }
 
   const next = {
-    ...(await getCacheOptions("fulfillment")),
+    ...getPublicCacheOptions(`fulfillment-${cartId}`),
+    revalidate: 30,
   }
 
   return sdk.client
@@ -41,10 +42,6 @@ export const calculatePriceForShippingOption = async (
     ...(await getAuthHeaders()),
   }
 
-  const next = {
-    ...(await getCacheOptions("fulfillment")),
-  }
-
   const body = { cart_id: cartId, data }
 
   if (data) {
@@ -58,7 +55,6 @@ export const calculatePriceForShippingOption = async (
         method: "POST",
         body,
         headers,
-        next,
       }
     )
     .then(({ shipping_option }) => shipping_option)

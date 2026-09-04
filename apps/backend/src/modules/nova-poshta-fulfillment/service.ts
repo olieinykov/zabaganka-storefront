@@ -10,26 +10,19 @@ import { NovaPoshtaClient } from "./client"
 import {
   NovaPoshtaOptions,
   NovaPoshtaDeliveryType,
-  NP_POSTOMAT_TYPE_REF,
 } from "./types"
+import { estimatePackage, type CartItemForSizing } from "./package-estimate"
 
 type InjectedDependencies = {
   logger: Logger
 }
 
-/**
- * Fulfillment provider for Nova Poshta ("Нова Пошта").
- *
- * Exposes three fulfillment options that admins can turn into shipping
- * options in the dashboard:
- *  - nova-poshta-warehouse : delivery to a branch ("відділення")
- *  - nova-poshta-postomat  : delivery to a parcel locker ("поштомат")
- *  - nova-poshta-courier   : courier delivery to the door
- *
- * City/warehouse lookups for the storefront autocomplete are served by the
- * `/store/delivery/nova-poshta/*` API routes, which reuse the same
- * `NovaPoshtaClient` so the API key never leaves the server.
- */
+const DEFAULT_ITEM_WEIGHT_KG = 0.05
+const DEFAULT_ITEM_DIMENSION_CM = 20
+const DEFAULT_POSTOMAT_MAX_DIMENSIONS_CM = { length: 40, width: 38, height: 40 }
+const DEFAULT_POSTOMAT_MAX_WEIGHT_KG = 20
+
+
 class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderService {
   static identifier = "nova-poshta"
 
@@ -73,24 +66,43 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
   }
 
   async canCalculate(): Promise<boolean> {
-    // We can always attempt a live calculation as long as a sender city is configured.
     return !!this.options_.senderCityRef
   }
 
-  /**
-   * Validates (and enriches) the data submitted when the customer selects this
-   * shipping option / adds the shipping method to the cart. This is where the
-   * city/warehouse chosen via the storefront autocomplete gets validated and
-   * normalized before it's stored on the cart's shipping method `data` field
-   * (from which it is later copied into `metadata` — see the storefront
-   * `setDeliveryDestination` action and the `order-delivery-metadata` subscriber).
-   */
+
   async validateFulfillmentData(
     optionData: Record<string, unknown>,
     data: Record<string, unknown>,
     context: Record<string, unknown>
   ): Promise<any> {
     const type = optionData?.type as NovaPoshtaDeliveryType
+
+    if (type === "postomat") {
+      const items = (context?.items || []) as CartItemForSizing[]
+      const pkg = estimatePackage(items, {
+        weightKg: this.options_.defaultItemWeightKg ?? DEFAULT_ITEM_WEIGHT_KG,
+        dimensionCm: this.options_.defaultItemDimensionCm ?? DEFAULT_ITEM_DIMENSION_CM,
+      })
+      const maxDims = this.options_.postomatMaxDimensionsCm ?? DEFAULT_POSTOMAT_MAX_DIMENSIONS_CM
+      const maxWeight = this.options_.postomatMaxWeightKg ?? DEFAULT_POSTOMAT_MAX_WEIGHT_KG
+
+      const exceedsWeight = pkg.weightKg > maxWeight
+      const exceedsDimensions =
+        pkg.lengthCm > maxDims.length ||
+        pkg.widthCm > maxDims.width ||
+        pkg.heightCm > maxDims.height
+
+      if (exceedsWeight || exceedsDimensions) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          `Замовлення не поміщається у поштомат (орієнтовно ${+pkg.weightKg.toFixed(1) / 1000} кг, ${pkg.lengthCm.toFixed(0)}×${pkg.widthCm.toFixed(0)}×${pkg.heightCm.toFixed(
+            0
+          )} см; ліміт поштомата: ${maxWeight} кг, ${maxDims.length}×${maxDims.width}×${
+            maxDims.height
+          } см). Оберіть доставку у відділення.`
+        )
+      }
+    }
 
     if (type === "courier") {
       const shippingAddress = context?.shipping_address as
@@ -111,7 +123,6 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
       }
     }
 
-    // warehouse / postomat — city + warehouse selection is mandatory
     const cityRef = data?.city_ref as string
     const cityName = data?.city_name as string
     const warehouseRef = data?.warehouse_ref as string
@@ -143,29 +154,46 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
     const cityRef = (data as Record<string, unknown>)?.city_ref as string | undefined
 
     if (!this.options_.senderCityRef || (!cityRef && type !== "courier")) {
-      // Not enough information yet (e.g. city not chosen) — fall back to 0 and
-      // let the storefront show a loading/"select a city" state instead of an error.
       return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
     }
 
-    const items = (context?.items || []) as Array<{
-      quantity: number
-      variant?: { weight?: number | null }
-    }>
+    const items = (context?.items || []) as CartItemForSizing[]
+    console.log(`ITEMS: ${JSON.stringify(items)}`)
+    if (!items.length) {
+      this.logger_.warn(
+        "[nova-poshta] calculatePrice received an empty items list. If the cart " +
+          "actually has items, this option's Shipping Profile likely doesn't match " +
+          "the products' Shipping Profile — check Settings → Shipping Profiles in Admin. " +
+          "Falling back to default weight/dimensions for pricing."
+      )
+    }
 
-    const weight =
-      items.reduce((sum, item) => sum + (item.variant?.weight || 0.5) * item.quantity, 0) || 1
+    const pkg = estimatePackage(items, {
+      weightKg: this.options_.defaultItemWeightKg ?? DEFAULT_ITEM_WEIGHT_KG,
+      dimensionCm: this.options_.defaultItemDimensionCm ?? DEFAULT_ITEM_DIMENSION_CM,
+    })
 
-    const declaredCost = (context as { items?: Array<{ quantity: number; unit_price: number }> })
-      ?.items?.reduce((sum, item) => sum + item.unit_price * item.quantity, 0) || 300
+    const declaredCost =
+      (context as { items?: Array<{ quantity: number; unit_price: number }> })?.items?.reduce(
+        (sum, item) => sum + item.unit_price * item.quantity,
+        0
+      ) || 300
 
     try {
       const price = await this.client.getDocumentPrice({
         citySender: this.options_.senderCityRef,
         cityRecipient: cityRef || this.options_.senderCityRef,
-        weight,
+        weight: pkg.weightKg,
         cost: Math.max(declaredCost, 300),
         serviceType: type === "courier" ? "WarehouseDoors" : "WarehouseWarehouse",
+        optionsSeat: [
+          {
+            weight: pkg.weightKg,
+            volumetricLength: pkg.lengthCm,
+            volumetricWidth: pkg.widthCm,
+            volumetricHeight: pkg.heightCm,
+          },
+        ],
       })
 
       return {
@@ -182,14 +210,7 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
     }
   }
 
-  /**
-   * Called when an admin creates a fulfillment for an order using this provider.
-   * A full "create TTN / waybill" integration (InternetDocument.save) would go
-   * here — it requires sender counterparty data (contract-specific) which is
-   * outside the scope of the storefront checkout flow, so this returns the
-   * data as-is. Extend this method once sender counterparty details are
-   * configured to actually generate and store a real Nova Poshta waybill number.
-   */
+  
   async createFulfillment(
     data: Record<string, unknown>,
     _items: unknown[],
@@ -209,9 +230,6 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
     return {}
   }
 
-  /** Exposes the underlying API client so the store API routes could resolve
-   *  this service and reuse the client. Currently the store routes instantiate
-   *  their own client from env vars directly for simplicity (see api/store/delivery). */
   getClient() {
     return this.client
   }
