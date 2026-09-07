@@ -187,9 +187,9 @@ export default function ProductActions({
           isLoading={isAdding}
           data-testid="add-product-button"
         >
-          {!selectedVariant && !options
-            ? "Оберіть варіант"
-            : !inStock || !isValidVariant
+          {!selectedVariant || !isValidVariant
+            ? "Оберіть варіант товару"
+            : !inStock
             ? "Немає в наявності"
             : "Додати до кошика"}
         </Button>

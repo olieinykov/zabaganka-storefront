@@ -109,9 +109,13 @@ const DeliveryDestination: React.FC<Props> = ({
     [carrier, type]
   )
 
-  // City search
+  // City search — also required for courier now: Nova Poshta's own price
+  // calculation (InternetDocument.getDocumentPrice) needs a real
+  // `CityRecipient` Ref for the *destination* city, not the free-text city
+  // typed into the shipping address form. See
+  // `src/modules/nova-poshta-fulfillment/service.ts` `calculatePrice` on
+  // the backend for how this Ref is used.
   useEffect(() => {
-    if (type === "courier") return
     if (selectedCity && debouncedCityQuery === selectedCity.name) return
     if (debouncedCityQuery.trim().length < 2) {
       setCityResults([])
@@ -132,7 +136,7 @@ const DeliveryDestination: React.FC<Props> = ({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedCityQuery, type])
+  }, [debouncedCityQuery])
 
   // Warehouse search (depends on selected city)
   useEffect(() => {
@@ -159,7 +163,17 @@ const DeliveryDestination: React.FC<Props> = ({
   // Propagate a valid selection up to the parent
   useEffect(() => {
     if (type === "courier") {
-      onChange({ carrier, type, comment: debouncedComment || undefined })
+      if (selectedCity) {
+        onChange({
+          carrier,
+          type,
+          city_ref: selectedCity.ref,
+          city_name: selectedCity.name,
+          comment: debouncedComment || undefined,
+        })
+      } else {
+        onChange(null)
+      }
       return
     }
 
@@ -181,20 +195,88 @@ const DeliveryDestination: React.FC<Props> = ({
   const cityBoxRef = useRef<HTMLDivElement>(null)
   const warehouseBoxRef = useRef<HTMLDivElement>(null)
 
+  const cityAutocomplete = (
+    <div className="relative" ref={cityBoxRef}>
+      <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
+        Місто<span className="text-rose-500">*</span>
+      </label>
+      <input
+        type="text"
+        className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-compact-medium focus:outline-none focus:shadow-borders-interactive-with-active"
+        placeholder="Почніть вводити назву міста"
+        value={cityQuery}
+        onChange={(e) => {
+          setCityQuery(e.target.value)
+          setSelectedCity(null)
+          setSelectedWarehouse(null)
+          setWarehouseQuery("")
+          setCityDropdownOpen(true)
+        }}
+        onFocus={() => setCityDropdownOpen(true)}
+        onBlur={() => setTimeout(() => setCityDropdownOpen(false), 150)}
+        data-testid="delivery-city-input"
+      />
+      {cityDropdownOpen && (cityLoading || cityResults.length > 0) && (
+        <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-md border border-ui-border-base bg-white shadow-elevation-flyout">
+          {cityLoading && (
+            <li className="px-3 py-2 txt-compact-small text-ui-fg-subtle">
+              Пошук…
+            </li>
+          )}
+          {!cityLoading &&
+            cityResults.map((city) => (
+              <li
+                key={city.ref}
+                className="px-3 py-2 txt-compact-small cursor-pointer hover:bg-ui-bg-subtle"
+                onMouseDown={() => {
+                  setSelectedCity(city)
+                  setCityQuery(city.name)
+                  setCityDropdownOpen(false)
+                  setSelectedWarehouse(null)
+                  setWarehouseQuery("")
+                }}
+                data-testid="delivery-city-option"
+              >
+                {city.name}
+                {city.area ? (
+                  <span className="text-ui-fg-subtle"> — {city.area}</span>
+                ) : null}
+              </li>
+            ))}
+        </ul>
+      )}
+    </div>
+  )
+
   if (type === "courier") {
     return (
-      <div className="mt-4" data-testid="delivery-destination-courier">
-        <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
-          Коментар для кур&apos;єра (під&apos;їзд, поверх, домофон)
-        </label>
-        <textarea
-          className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-compact-medium focus:outline-none focus:shadow-borders-interactive-with-active"
-          rows={2}
-          placeholder="Необов'язково"
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          data-testid="delivery-courier-comment"
-        />
+      <div
+        className="mt-4 grid grid-cols-1 gap-4"
+        data-testid="delivery-destination-courier"
+      >
+        {/* Nova Poshta needs a real destination city Ref to price a courier
+            delivery correctly — the free-text city typed into the shipping
+            address form isn't one, so it's selected here the same way as
+            for warehouse/postomat delivery. */}
+        {cityAutocomplete}
+        <div>
+          <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
+            Коментар для кур&apos;єра (під&apos;їзд, поверх, домофон)
+          </label>
+          <textarea
+            className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-compact-medium focus:outline-none focus:shadow-borders-interactive-with-active"
+            rows={2}
+            placeholder="Необов'язково"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            data-testid="delivery-courier-comment"
+          />
+        </div>
+        {!selectedCity ? (
+          <Text className="txt-compact-small text-ui-fg-subtle">
+            Оберіть місто, щоб продовжити оформлення замовлення.
+          </Text>
+        ) : null}
       </div>
     )
   }
@@ -202,56 +284,7 @@ const DeliveryDestination: React.FC<Props> = ({
   return (
     <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* City autocomplete */}
-      <div className="relative" ref={cityBoxRef}>
-        <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
-          Місто<span className="text-rose-500">*</span>
-        </label>
-        <input
-          type="text"
-          className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-compact-medium focus:outline-none focus:shadow-borders-interactive-with-active"
-          placeholder="Почніть вводити назву міста"
-          value={cityQuery}
-          onChange={(e) => {
-            setCityQuery(e.target.value)
-            setSelectedCity(null)
-            setSelectedWarehouse(null)
-            setWarehouseQuery("")
-            setCityDropdownOpen(true)
-          }}
-          onFocus={() => setCityDropdownOpen(true)}
-          onBlur={() => setTimeout(() => setCityDropdownOpen(false), 150)}
-          data-testid="delivery-city-input"
-        />
-        {cityDropdownOpen && (cityLoading || cityResults.length > 0) && (
-          <ul className="absolute z-20 mt-1 w-full max-h-56 overflow-auto rounded-md border border-ui-border-base bg-white shadow-elevation-flyout">
-            {cityLoading && (
-              <li className="px-3 py-2 txt-compact-small text-ui-fg-subtle">
-                Пошук…
-              </li>
-            )}
-            {!cityLoading &&
-              cityResults.map((city) => (
-                <li
-                  key={city.ref}
-                  className="px-3 py-2 txt-compact-small cursor-pointer hover:bg-ui-bg-subtle"
-                  onMouseDown={() => {
-                    setSelectedCity(city)
-                    setCityQuery(city.name)
-                    setCityDropdownOpen(false)
-                    setSelectedWarehouse(null)
-                    setWarehouseQuery("")
-                  }}
-                  data-testid="delivery-city-option"
-                >
-                  {city.name}
-                  {city.area ? (
-                    <span className="text-ui-fg-subtle"> — {city.area}</span>
-                  ) : null}
-                </li>
-              ))}
-          </ul>
-        )}
-      </div>
+      {cityAutocomplete}
 
       {/* Warehouse / postomat autocomplete */}
       <div className="relative" ref={warehouseBoxRef}>

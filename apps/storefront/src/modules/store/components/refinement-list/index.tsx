@@ -7,11 +7,13 @@ import {
   OPTION_VALUE_QUERY_KEY,
   parseOptionValueIds,
 } from "@lib/util/product-option-filters"
+import { HttpTypes } from "@medusajs/types"
 import OptionsPicker from "./options-picker"
 import SortProducts, { SortOptions } from "./sort-products"
 
 type RefinementListProps = {
   sortBy: SortOptions
+  options?: HttpTypes.StoreProductOption[]
   search?: boolean
   hideOptionsPicker?: boolean
   "data-testid"?: string
@@ -19,6 +21,7 @@ type RefinementListProps = {
 
 const RefinementList = ({
   sortBy,
+  options = [],
   hideOptionsPicker = false,
   "data-testid": dataTestId,
 }: RefinementListProps) => {
@@ -72,6 +75,7 @@ const RefinementList = ({
       />
       {!hideOptionsPicker && (
         <OptionsPicker
+          options={options}
           selectedValueIds={selectedOptionValueIds}
           setOptionValueIds={setOptionValueIds}
         />

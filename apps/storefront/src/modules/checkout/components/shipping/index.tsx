@@ -80,7 +80,9 @@ function formatDeliveryDestination(
   }
 
   if (data.type === "courier") {
-    return data.comment ? `Коментар для кур'єра: ${data.comment}` : null
+    const cityPart = data.city_name ? `Кур'єром у м. ${data.city_name}` : null
+    const commentPart = data.comment ? `Коментар для кур'єра: ${data.comment}` : null
+    return [cityPart, commentPart].filter(Boolean).join(". ") || null
   }
 
   // "warehouse" | "postomat"
@@ -109,6 +111,11 @@ const Shipping: React.FC<ShippingProps> = ({
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
   )
 
+  // "Поштомат" needs to be greyed out up front if the order's estimated
+  // package doesn't fit a standard cell — see
+  // src/lib/util/postomat-capacity.ts. The backend enforces this
+  // authoritatively on submit either way; this is just so the customer
+  // doesn't pick it and then hit an error.
   const [postomatLimits, setPostomatLimits] = useState<PostomatLimits | null>(null)
   useEffect(() => {
     fetchPostomatLimits()
@@ -646,9 +653,7 @@ const Shipping: React.FC<ShippingProps> = ({
               return (
                 <div className="flex flex-col w-2/3">
                   <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                    {lastShippingMethodData?.type === "courier"
-                      ? "Коментар"
-                      : "Адреса доставки"}
+                    Адреса доставки
                   </Text>
                   <Text className="txt-medium text-ui-fg-subtle">
                     {destinationText}

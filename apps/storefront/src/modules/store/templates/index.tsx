@@ -4,10 +4,11 @@ import { OptionValueIds } from "@lib/util/product-option-filters"
 import SkeletonProductGrid from "@modules/skeletons/templates/skeleton-product-grid"
 import RefinementList from "@modules/store/components/refinement-list"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
+import { listProductOptions } from "@lib/data/product-options"
 
 import PaginatedProducts from "./paginated-products"
 
-const StoreTemplate = ({
+const StoreTemplate = async ({
   sortBy,
   page,
   countryCode,
@@ -20,13 +21,14 @@ const StoreTemplate = ({
 }) => {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
+  const options = await listProductOptions()
 
   return (
     <div
       className="flex flex-col small:flex-row small:items-start py-6 content-container"
       data-testid="category-container"
     >
-      <RefinementList sortBy={sort} />
+      <RefinementList sortBy={sort} options={options} />
       <div className="w-full">
         <div className="mb-8 text-2xl-semi">
           <h1 data-testid="store-page-title">Усі товари</h1>

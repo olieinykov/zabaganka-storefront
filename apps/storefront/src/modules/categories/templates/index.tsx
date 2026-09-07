@@ -9,8 +9,9 @@ import PaginatedProducts from "@modules/store/templates/paginated-products"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { HttpTypes } from "@medusajs/types"
 import { OptionValueIds } from "@lib/util/product-option-filters"
+import { listProductOptions } from "@lib/data/product-options"
 
-export default function CategoryTemplate({
+export default async function CategoryTemplate({
   category,
   sortBy,
   page,
@@ -28,6 +29,8 @@ export default function CategoryTemplate({
 
   if (!category || !countryCode) notFound()
 
+  const options = await listProductOptions()
+
   const parents = [] as HttpTypes.StoreProductCategory[]
 
   const getParents = (category: HttpTypes.StoreProductCategory) => {
@@ -44,7 +47,11 @@ export default function CategoryTemplate({
       className="flex flex-col small:flex-row small:items-start py-6 content-container"
       data-testid="category-container"
     >
-      <RefinementList sortBy={sort} data-testid="sort-by-container" />
+      <RefinementList
+        sortBy={sort}
+        options={options}
+        data-testid="sort-by-container"
+      />
       <div className="w-full small:flex-1">
         <div className="flex flex-row mb-8 text-2xl-semi gap-4">
           {parents &&
