@@ -1,4 +1,5 @@
 import { getProductPrice } from "@lib/util/get-product-price"
+import { isProductFullyOutOfStock } from "@lib/util/product"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import QuickAddButton from "@modules/products/components/quick-add-button"
@@ -23,6 +24,7 @@ export default async function ProductPreview({
   })
 
   const categoryName = product.categories?.[0]?.name
+  const outOfStock = isProductFullyOutOfStock(product)
 
   return (
     <div data-testid="product-wrapper" className="group flex flex-col h-full">
@@ -35,11 +37,18 @@ export default async function ProductPreview({
           images={product.images}
           size="full"
           isFeatured={isFeatured}
+          className={outOfStock ? "opacity-60 grayscale-[35%]" : undefined}
         />
-        {badge && (
-          <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase text-ink">
-            {badge}
+        {outOfStock ? (
+          <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase text-ui-fg-muted">
+            Немає в наявності
           </span>
+        ) : (
+          badge && (
+            <span className="absolute top-3 left-3 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase text-ink">
+              {badge}
+            </span>
+          )
         )}
         <WishlistButton className="absolute top-3 right-3" />
       </LocalizedClientLink>

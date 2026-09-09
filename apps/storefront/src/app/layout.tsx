@@ -24,8 +24,31 @@ export const metadata: Metadata = {
     default: "Zabaganka Boutique",
     template: "%s | Zabaganka Boutique",
   },
-  description:
-    "Zabaganka Boutique — прикраси та аксесуари для особливих моментів і щоденних образів.",
+  description: "Zabaganka Boutique — прикраси та аксесуари для особливих моментів і щоденних образів.",
+  openGraph: {
+    title: "Zabaganka Boutique",
+    description:
+      "Прикраси та аксесуари для особливих моментів і щоденних образів.",
+    type: "website",
+    locale: "uk_UA",
+    siteName: "Zabaganka Boutique",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1731,
+        height: 909,
+        alt: "Zabaganka Boutique",
+      },
+    ],
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Zabaganka Boutique",
+    description:
+      "Прикраси та аксесуари для особливих моментів і щоденних образів.",
+    images: ["/og-image.jpg"],
+  },
 }
 
 export default function RootLayout(props: { children: React.ReactNode }) {

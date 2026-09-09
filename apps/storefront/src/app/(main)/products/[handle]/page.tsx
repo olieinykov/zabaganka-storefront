@@ -32,9 +32,13 @@ export async function generateStaticParams() {
 }
 
 function getImagesForVariant(
-  product: HttpTypes.StoreProduct,
+  product: HttpTypes.StoreProduct | undefined | null,
   selectedVariantId?: string
 ) {
+  if (!product) {
+    return []
+  }
+
   if (!selectedVariantId || !product.variants) {
     return product.images
   }
@@ -92,11 +96,11 @@ export default async function ProductPage(props: Props) {
     queryParams: { handle: params.handle },
   }).then(({ response }) => response.products[0])
 
-  const images = getImagesForVariant(pricedProduct, selectedVariantId)
-
   if (!pricedProduct) {
     notFound()
   }
+
+  const images = getImagesForVariant(pricedProduct, selectedVariantId)
 
   return (
     <ProductTemplate
@@ -104,6 +108,7 @@ export default async function ProductPage(props: Props) {
       region={region}
       countryCode={COUNTRY_CODE}
       images={images ?? []}
+      selectedVariantId={selectedVariantId}
     />
   )
 }

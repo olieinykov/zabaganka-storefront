@@ -1,6 +1,6 @@
-import { Dialog, Transition } from "@headlessui/react"
+import { Dialog, Transition, TransitionChild, DialogPanel } from "@headlessui/react"
 import { Button, clx } from "@modules/common/components/ui"
-import React, { Fragment, useMemo } from "react"
+import { Fragment, useMemo } from "react"
 
 import useToggleState from "@lib/hooks/use-toggle-state"
 import ChevronDown from "@modules/common/icons/chevron-down"
@@ -15,12 +15,13 @@ type MobileActionsProps = {
   product: HttpTypes.StoreProduct
   variant?: HttpTypes.StoreProductVariant
   options: Record<string, string | undefined>
-  updateOptions: (title: string, value: string) => void
+  updateOptions: (title: string, value: string | undefined) => void
   inStock?: boolean
   handleAddToCart: () => void
   isAdding?: boolean
   show: boolean
   optionsDisabled: boolean
+  onNotifyMe?: () => void
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -33,6 +34,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   isAdding,
   show,
   optionsDisabled,
+  onNotifyMe,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -60,7 +62,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
         })}
       >
         <Transition
-          as={Fragment}
+          as={Fragment as React.ElementType}
           show={show}
           enter="ease-in-out duration-300"
           enterFrom="opacity-0"
@@ -111,32 +113,32 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                   <span>
                     {variant
                       ? Object.values(options).join(" / ")
-                      : "Select Options"}
+                      : "Оберіть варіант"}
                   </span>
                   <ChevronDown />
                 </div>
               </Button>}
               <Button
-                onClick={handleAddToCart}
-                disabled={!inStock || !variant}
+                onClick={variant && !inStock ? onNotifyMe : handleAddToCart}
+                disabled={!variant || (inStock && isAdding)}
                 className="w-full"
-                isLoading={isAdding}
+                isLoading={inStock ? isAdding : false}
                 data-testid="mobile-cart-button"
               >
                 {!variant
-                  ? "Select variant"
+                  ? "Оберіть варіант"
                   : !inStock
-                  ? "Out of stock"
-                  : "Add to cart"}
+                  ? "Повідомити, коли з'явиться"
+                  : "Додати до кошика"}
               </Button>
             </div>
           </div>
         </Transition>
       </div>
-      <Transition appear show={state} as={Fragment}>
+      <Transition appear show={state} as={Fragment as React.ElementType}>
         <Dialog as="div" className="relative z-[75]" onClose={close}>
-          <Transition.Child
-            as={Fragment}
+          <TransitionChild
+            as={Fragment as React.ElementType}
             enter="ease-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
@@ -145,12 +147,12 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             leaveTo="opacity-0"
           >
             <div className="fixed inset-0 bg-gray-700 bg-opacity-75 backdrop-blur-sm" />
-          </Transition.Child>
+          </TransitionChild>
 
           <div className="fixed bottom-0 inset-x-0">
             <div className="flex min-h-full h-full items-center justify-center text-center">
-              <Transition.Child
-                as={Fragment}
+              <TransitionChild
+                as={Fragment as React.ElementType}
                 enter="ease-out duration-300"
                 enterFrom="opacity-0"
                 enterTo="opacity-100"
@@ -158,7 +160,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 leaveFrom="opacity-100"
                 leaveTo="opacity-0"
               >
-                <Dialog.Panel
+                <DialogPanel
                   className="w-full h-full transform overflow-hidden text-left flex flex-col gap-y-3"
                   data-testid="mobile-actions-modal"
                 >
@@ -190,8 +192,8 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                       </div>
                     )}
                   </div>
-                </Dialog.Panel>
-              </Transition.Child>
+                </DialogPanel>
+              </TransitionChild>
             </div>
           </div>
         </Dialog>

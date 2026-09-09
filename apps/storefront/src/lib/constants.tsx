@@ -116,4 +116,4 @@ export const noDivisionCurrencies = [
 ]
 
 export const PRODUCT_PREVIEW_FIELDS =
-  "id,title,handle,thumbnail,*images,*categories,+variants.id,*variants.calculated_price";
+  "id,title,handle,thumbnail,*images,*categories,+variants.id,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,+variants.allow_backorder";

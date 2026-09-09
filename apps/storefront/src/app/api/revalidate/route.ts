@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   if (!tag) {
     return NextResponse.json({ message: "Missing tag" }, { status: 400 })
   }
-
+  console.log("TAG: " + tag)
   revalidateTag(tag, { expire: 0 })
 
   return NextResponse.json({ revalidated: true, tag })

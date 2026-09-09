@@ -6,7 +6,7 @@ import { getCollectionByHandle, listCollections } from "@lib/data/collections"
 import { StoreCollection } from "@medusajs/types"
 import CollectionTemplate from "@modules/collections/templates"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
-import { parseOptionValueIds } from "@lib/util/product-option-filters"
+import { parseInStockOnly, parseOptionValueIds } from "@lib/util/product-option-filters"
 
 type Props = {
   params: Promise<{ handle: string }>
@@ -54,6 +54,7 @@ export default async function CollectionPage(props: Props) {
   const params = await props.params
   const { sortBy, page } = searchParams
   const optionValueIds = parseOptionValueIds(searchParams)
+  const inStockOnly = parseInStockOnly(searchParams)
 
   const collection = await getCollectionByHandle(params.handle)
 
@@ -68,6 +69,7 @@ export default async function CollectionPage(props: Props) {
       sortBy={sortBy}
       countryCode={COUNTRY_CODE}
       optionValueIds={optionValueIds}
+      inStockOnly={inStockOnly}
     />
   )
 }

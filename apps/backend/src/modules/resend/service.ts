@@ -2,6 +2,7 @@ import { AbstractNotificationProviderService, MedusaError } from "@medusajs/fram
 import type { Logger, NotificationTypes } from "@medusajs/framework/types"
 import { Resend } from "resend"
 import { orderPlacedEmail, OrderPlacedEmailProps } from "./templates/order-placed"
+import { waitlistAvailableEmail, WaitlistAvailableEmailProps } from "./templates/waitlist-available"
 
 export type ResendOptions = {
   api_key: string
@@ -15,10 +16,12 @@ type InjectedDependencies = {
 
 export enum Templates {
   ORDER_PLACED = "order-placed",
+  WAITLIST_AVAILABLE = "waitlist-available",
 }
 
 const DEFAULT_SUBJECTS: Record<Templates, string> = {
   [Templates.ORDER_PLACED]: "Дякуємо за замовлення — Zabaganka Boutique",
+  [Templates.WAITLIST_AVAILABLE]: "Товар знову в наявності — Zabaganka Boutique",
 }
 
 class ResendNotificationProviderService extends AbstractNotificationProviderService {
@@ -64,6 +67,8 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     switch (template) {
       case Templates.ORDER_PLACED:
         return orderPlacedEmail(data as OrderPlacedEmailProps)
+      case Templates.WAITLIST_AVAILABLE:
+        return waitlistAvailableEmail(data as WaitlistAvailableEmailProps)
       default:
         return null
     }

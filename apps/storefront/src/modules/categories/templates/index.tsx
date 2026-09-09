@@ -17,12 +17,14 @@ export default async function CategoryTemplate({
   page,
   countryCode,
   optionValueIds,
+  inStockOnly,
 }: {
   category: HttpTypes.StoreProductCategory
   sortBy?: SortOptions
   page?: string
   countryCode: string
   optionValueIds?: OptionValueIds
+  inStockOnly?: boolean
 }) {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
@@ -100,6 +102,7 @@ export default async function CategoryTemplate({
             categoryId={category.id}
             countryCode={countryCode}
             optionValueIds={optionValueIds}
+            inStockOnly={inStockOnly}
           />
         </Suspense>
       </div>

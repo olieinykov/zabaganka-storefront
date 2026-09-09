@@ -14,12 +14,14 @@ export default async function CollectionTemplate({
   page,
   countryCode,
   optionValueIds,
+  inStockOnly,
 }: {
   sortBy?: SortOptions
   collection: HttpTypes.StoreCollection
   page?: string
   countryCode: string
   optionValueIds?: OptionValueIds
+  inStockOnly?: boolean
 }) {
   const pageNumber = page ? parseInt(page) : 1
   const sort = sortBy || "created_at"
@@ -45,6 +47,7 @@ export default async function CollectionTemplate({
             collectionId={collection.id}
             countryCode={countryCode}
             optionValueIds={optionValueIds}
+            inStockOnly={inStockOnly}
           />
         </Suspense>
       </div>

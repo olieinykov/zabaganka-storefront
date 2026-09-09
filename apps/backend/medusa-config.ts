@@ -30,6 +30,9 @@ module.exports = defineConfig({
       resolve: './src/modules/page-content',
     },
     {
+      resolve: './src/modules/product-waitlist',
+    },
+    {
       resolve: '@medusajs/medusa/notification',
       options: {
         providers: [

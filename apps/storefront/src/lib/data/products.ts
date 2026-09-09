@@ -3,6 +3,7 @@
 import { sdk } from "@lib/config"
 import { OptionValueIds } from "@lib/util/product-option-filters"
 import { sortProducts } from "@lib/util/sort-products"
+import { isProductInStock } from "@lib/util/product"
 import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getPublicCacheOptions } from "./cookies"
@@ -93,34 +94,6 @@ export const listProducts = async ({
     })
 }
 
-/**
- * Returns paginated, sorted products for the store grid.
- *
- * - `sortBy: "created_at"` (the default, and the common case) is fully
- *   delegated to the backend: we ask `/store/products` for exactly the page
- *   we need (`limit`/`offset`) already ordered by `created_at`, instead of
- *   fetching 100 products and slicing in JS. This also fixes pagination
- *   correctness as a side effect — `count` is now the real backend total,
- *   not capped at whatever the last "fetch 100" happened to return.
- *
- * - `price_asc` / `price_desc` can't be delegated: `calculated_price` is a
- *   computed field and Medusa's `/store/products` list can't order by it.
- *   Computing the sort order still requires the price of every matching
- *   product — that part is unavoidable without backend support. What IS
- *   avoidable is fetching the heavy card fields (thumbnail/images/
- *   categories) for all of them just to throw away everything except the
- *   12 the current page needs. So this path is two lightweight requests
- *   instead of one heavy one:
- *     1. `id,*variants.calculated_price` for up to `MAX_PRICE_SORT_BATCH`
- *        matching products — enough to sort and pick the right page's ids.
- *     2. `PRODUCT_PREVIEW_FIELDS` filtered to just those ~12 ids — the only
- *        request that pays for thumbnail/images/categories.
- *   `MAX_PRICE_SORT_BATCH` is a real (documented) cap, not the old "100 and
- *   hope": if a filter genuinely matches more than that, price-sort
- *   pagination past the cap won't be reachable, same class of limitation as
- *   before, just far more generous and now isolated to a single named
- *   constant instead of buried in the fetch call.
- */
 const MAX_PRICE_SORT_BATCH = 1000
 
 export const listProductsWithSort = async ({
@@ -129,12 +102,14 @@ export const listProductsWithSort = async ({
   sortBy = "created_at",
   countryCode,
   optionValueIds,
+  inStockOnly,
 }: {
   page?: number
   queryParams?: ProductListQueryParams
   sortBy?: SortOptions
   countryCode: string
   optionValueIds?: OptionValueIds
+  inStockOnly?: boolean
 }): Promise<{
   response: { products: HttpTypes.StoreProduct[]; count: number }
   nextPage: number | null
@@ -150,50 +125,53 @@ export const listProductsWithSort = async ({
     ...(optionFilters.length ? { option_value_id: optionFilters } : {}),
   }
 
-  if (sortBy !== "price_asc" && sortBy !== "price_desc") {
-    const {
-      response: { products, count },
-    } = await listProducts({
-      pageParam: Math.max(page, 1),
-      queryParams: {
-        ...baseQueryParams,
-        fields: PRODUCT_PREVIEW_FIELDS,
-        limit,
-        order: "-created_at",
-      },
-      countryCode,
-    })
-
-    const nextPage = count > page * limit ? page + 1 : null
-
-    return {
-      response: { products, count },
-      nextPage,
-      queryParams,
-    }
-  }
-
-  // Step 1: light request — just enough to determine sort order and which
-  // ids belong on the requested page. No thumbnail/images/categories here.
   const {
-    response: { products: priceOnlyProducts, count: totalCount },
+    response: { products: lightProducts, count: totalCount },
   } = await listProducts({
     pageParam: 1,
     queryParams: {
       ...baseQueryParams,
-      fields: "id,*variants.calculated_price",
+      fields:
+        "id,created_at,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,+variants.allow_backorder",
       limit: MAX_PRICE_SORT_BATCH,
+      order: "-created_at",
     },
     countryCode,
   })
 
-  const sortedIds = sortProducts(priceOnlyProducts, sortBy).map((p) => p.id)
+  const withStock = lightProducts.map((product) => ({
+    product,
+    inStock: isProductInStock(product),
+  }))
+
+  const filtered = inStockOnly
+    ? withStock.filter((entry) => entry.inStock)
+    : withStock
+
+  const ordered =
+    sortBy === "price_asc" || sortBy === "price_desc"
+      ? sortProducts(
+          filtered.map((entry) => entry.product),
+          sortBy
+        )
+      : filtered.map((entry) => entry.product)
+
+  const finalOrder = inStockOnly
+    ? ordered
+    : [
+        ...ordered.filter((p) =>
+          withStock.find((e) => e.product.id === p.id)?.inStock
+        ),
+        ...ordered.filter(
+          (p) => !withStock.find((e) => e.product.id === p.id)?.inStock
+        ),
+      ]
+
+  const sortedIds = finalOrder.map((p) => p.id)
 
   const pageParam = (page - 1) * limit
   const pageIds = sortedIds.slice(pageParam, pageParam + limit)
 
-  // Real total when it fits in the batch; otherwise we only know it's at
-  // least as many as we fetched (same documented cap as above).
   const count = Math.min(totalCount, sortedIds.length)
   const nextPage = count > pageParam + limit ? page + 1 : null
 
@@ -201,7 +179,6 @@ export const listProductsWithSort = async ({
     return { response: { products: [], count }, nextPage: null, queryParams }
   }
 
-  // Step 2: fetch full card data for ONLY this page's ids.
   const {
     response: { products: pageProducts },
   } = await listProducts({
@@ -216,8 +193,7 @@ export const listProductsWithSort = async ({
   })
 
   // The backend doesn't guarantee id-filtered results come back in the
-  // order the ids were passed, so re-apply the price order we computed in
-  // step 1.
+  // order the ids were passed, so re-apply the order we computed above.
   const byId = new Map(pageProducts.map((p) => [p.id, p]))
   const orderedPageProducts = pageIds
     .map((id) => byId.get(id))

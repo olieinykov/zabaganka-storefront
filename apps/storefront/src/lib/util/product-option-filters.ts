@@ -1,4 +1,5 @@
 export const OPTION_VALUE_QUERY_KEY = "optionValueIds"
+export const IN_STOCK_ONLY_QUERY_KEY = "inStockOnly"
 
 export type OptionValueIds = string[]
 
@@ -23,4 +24,19 @@ export const parseOptionValueIds = (
   }
 
   return []
+}
+
+export const parseInStockOnly = (
+  searchParams: URLSearchParams | Record<string, string | string[] | undefined>
+): boolean => {
+  if (typeof (searchParams as URLSearchParams).get === "function") {
+    return (searchParams as URLSearchParams).get(IN_STOCK_ONLY_QUERY_KEY) === "true"
+  }
+
+  const paramValue = (
+    searchParams as Record<string, string | string[] | undefined>
+  )[IN_STOCK_ONLY_QUERY_KEY]
+
+  const value = Array.isArray(paramValue) ? paramValue[0] : paramValue
+  return value === "true"
 }
