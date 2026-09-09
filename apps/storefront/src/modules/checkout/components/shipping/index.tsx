@@ -1,16 +1,15 @@
 "use client"
 import { Radio, RadioGroup } from "@headlessui/react"
 import { setCartDeliveryMetadata, setShippingMethod } from "@lib/data/cart"
-import { calculatePriceForShippingOption } from "@lib/data/fulfillment"
 import {
   estimatesExceedPostomat,
   fetchPostomatLimits,
   type PostomatLimits,
 } from "@lib/util/postomat-capacity"
-import { convertToLocale } from "@lib/util/money"
-import { CheckCircleSolid, Loader } from "@medusajs/icons"
+import { CheckCircleSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import ErrorMessage from "@modules/checkout/components/error-message"
+import { CarrierLogo } from "@modules/checkout/components/carrier-logos"
 import DeliveryDestination, {
   DeliveryDestinationValue,
 } from "@modules/checkout/components/delivery-destination"
@@ -99,13 +98,9 @@ const Shipping: React.FC<ShippingProps> = ({
   availableShippingMethods,
 }) => {
   const [isLoading, setIsLoading] = useState(false)
-  const [isLoadingPrices, setIsLoadingPrices] = useState(true)
 
   const [showPickupOptions, setShowPickupOptions] =
     useState<string>(PICKUP_OPTION_OFF)
-  const [calculatedPricesMap, setCalculatedPricesMap] = useState<
-    Record<string, number>
-  >({})
   const [error, setError] = useState<string | null>(null)
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
@@ -167,55 +162,16 @@ const Shipping: React.FC<ShippingProps> = ({
 
   const hasPickupOptions = !!_pickupMethods?.length
 
-  // Any invocation of a Server Action anywhere on this page (including
-  // `calculatePriceForShippingOption` below) makes Next.js re-render the
-  // whole route on the server, which re-fetches `availableShippingMethods`
-  // and hands this component a *new array reference* with the same
-  // underlying data. If this effect depended on that reference directly, it
-  // would fire again, call the Server Action again, trigger another
-  // re-render, and loop forever — which also kept stomping on whatever the
-  // customer was typing into the address form elsewhere on the page (that
-  // component re-syncs from the `cart` prop on every reference change too).
-  // Depending on a content-based key instead means the effect only re-runs
-  // when the actual set of options/prices could have changed.
   const shippingMethodsKey = useMemo(
     () =>
       (availableShippingMethods ?? [])
-        .map((sm) => `${sm.id}:${sm.price_type}`)
+        .map((sm) => sm.id)
         .sort()
         .join(","),
     [availableShippingMethods]
   )
 
   useEffect(() => {
-    setIsLoadingPrices(true)
-
-    if (_shippingMethods?.length) {
-      const promises = _shippingMethods
-        .filter((sm) => sm.price_type === "calculated")
-        .map((sm) => calculatePriceForShippingOption(sm.id, cart.id))
-
-      if (promises.length) {
-        Promise.allSettled(promises).then((res) => {
-          const pricesMap: Record<string, number> = {}
-          res
-            .filter((r) => r.status === "fulfilled")
-            .forEach((p) => {
-              if (p.value?.id) {
-                pricesMap[p.value.id] = p.value.amount ?? 0
-              }
-            })
-
-          setCalculatedPricesMap(pricesMap)
-          setIsLoadingPrices(false)
-        })
-      } else {
-        setIsLoadingPrices(false)
-      }
-    } else {
-      setIsLoadingPrices(false)
-    }
-
     if (_pickupMethods?.find((m) => m.id === shippingMethodId)) {
       setShowPickupOptions(PICKUP_OPTION_ON)
     }
@@ -396,9 +352,6 @@ const Shipping: React.FC<ShippingProps> = ({
                           Заберіть своє замовлення
                         </span>
                       </div>
-                      <span className="justify-self-end text-ui-fg-base">
-                        -
-                      </span>
                     </Radio>
                   </RadioGroup>
                 )}
@@ -446,11 +399,10 @@ const Shipping: React.FC<ShippingProps> = ({
                       optionData?.carrier === "nova-poshta" && optionData?.type === "postomat"
                     const isTooBigForPostomat = isPostomat && exceedsPostomat
 
-                    const isDisabled =
-                      isTooBigForPostomat ||
-                      (option.price_type === "calculated" &&
-                        !isLoadingPrices &&
-                        typeof calculatedPricesMap[option.id] !== "number")
+                    const isDisabled = isTooBigForPostomat
+                    const showCarrierLogo =
+                      optionData?.carrier === "nova-poshta" ||
+                      optionData?.carrier === "ukrposhta"
 
                     return (
                       <Radio
@@ -464,7 +416,7 @@ const Shipping: React.FC<ShippingProps> = ({
                             : undefined
                         }
                         className={clx(
-                          "flex items-center justify-between text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
+                          "flex items-center text-small-regular cursor-pointer py-4 border rounded-rounded px-8 mb-2 hover:shadow-borders-interactive-with-active",
                           {
                             "border-ui-border-interactive":
                               option.id === shippingMethodId,
@@ -477,6 +429,9 @@ const Shipping: React.FC<ShippingProps> = ({
                           <MedusaRadio
                             checked={option.id === shippingMethodId}
                           />
+                          {showCarrierLogo && optionData?.carrier ? (
+                            <CarrierLogo carrier={optionData.carrier} />
+                          ) : null}
                           <span className="text-base-regular">
                             {option.name}
                             {isTooBigForPostomat && (
@@ -486,25 +441,6 @@ const Shipping: React.FC<ShippingProps> = ({
                             )}
                           </span>
                         </div>
-                        <span className="justify-self-end text-ui-fg-base">
-                          {isTooBigForPostomat ? (
-                            "-"
-                          ) : option.price_type === "flat" ? (
-                            convertToLocale({
-                              amount: option.amount!,
-                              currency_code: cart?.currency_code,
-                            })
-                          ) : calculatedPricesMap[option.id] ? (
-                            convertToLocale({
-                              amount: calculatedPricesMap[option.id],
-                              currency_code: cart?.currency_code,
-                            })
-                          ) : isLoadingPrices ? (
-                            <Loader />
-                          ) : (
-                            "-"
-                          )}
-                        </span>
                       </Radio>
                     )
                   })}
@@ -586,12 +522,6 @@ const Shipping: React.FC<ShippingProps> = ({
                               </span>
                             </div>
                           </div>
-                          <span className="justify-self-end text-ui-fg-base">
-                            {convertToLocale({
-                              amount: option.amount!,
-                              currency_code: cart?.currency_code,
-                            })}
-                          </span>
                         </Radio>
                       )
                     })}
@@ -634,11 +564,7 @@ const Shipping: React.FC<ShippingProps> = ({
                   Метод
                 </Text>
                 <Text className="txt-medium text-ui-fg-subtle">
-                  {cart.shipping_methods!.at(-1)!.name}{" "}
-                  {convertToLocale({
-                    amount: cart.shipping_methods!.at(-1)!.amount!,
-                    currency_code: cart?.currency_code,
-                  })}
+                  {cart.shipping_methods!.at(-1)!.name}
                 </Text>
               </div>
             )}

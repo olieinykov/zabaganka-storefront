@@ -39,10 +39,6 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
             </div>
           )}
           <div className="flex items-center justify-between">
-            <span>Shipping</span>
-            <span>{getAmount(order.shipping_total)}</span>
-          </div>
-          <div className="flex items-center justify-between">
             <span>Taxes</span>
             <span>{getAmount(order.tax_total)}</span>
           </div>
@@ -50,7 +46,9 @@ const OrderSummary = ({ order }: OrderSummaryProps) => {
         <div className="h-px w-full border-b border-gray-200 border-dashed my-4" />
         <div className="flex items-center justify-between text-base-regular text-ui-fg-base mb-2">
           <span>Total</span>
-          <span>{getAmount(order.total)}</span>
+          <span>
+            {getAmount(Math.max(0, (order.total ?? 0) - (order.shipping_total ?? 0)))}
+          </span>
         </div>
       </div>
     </div>

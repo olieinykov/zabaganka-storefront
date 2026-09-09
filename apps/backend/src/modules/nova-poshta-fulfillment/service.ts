@@ -92,6 +92,63 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
    * (from which it is later copied into `metadata` — see the storefront
    * `setDeliveryDestination` action and the `order-delivery-metadata` subscriber).
    */
+  /**
+   * Live tariff lookup against Nova Poshta's API. Used to populate
+   * `estimated_shipping_cost` for admin reporting — the storefront never
+   * charges this amount (see `calculatePrice`).
+   */
+  private async computeShippingCost(
+    optionData: Record<string, unknown>,
+    data: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): Promise<number> {
+    const type = optionData?.type as NovaPoshtaDeliveryType
+    const cityRef = data?.city_ref as string | undefined
+
+    if (!this.options_.senderCityRef || !cityRef) {
+      return 0
+    }
+
+    const items = (context?.items || []) as CartItemForSizing[]
+    if (!items.length) {
+      this.logger_.warn(
+        "[nova-poshta] computeShippingCost received an empty items list. If the cart " +
+          "actually has items, this option's Shipping Profile likely doesn't match " +
+          "the products' Shipping Profile — check Settings → Shipping Profiles in Admin. " +
+          "Falling back to default weight/dimensions for pricing."
+      )
+    }
+
+    const pkg = estimatePackage(items, {
+      weightKg: this.options_.defaultItemWeightKg ?? DEFAULT_ITEM_WEIGHT_KG,
+      dimensionCm: this.options_.defaultItemDimensionCm ?? DEFAULT_ITEM_DIMENSION_CM,
+    })
+
+    const declaredCost =
+      (context as { items?: Array<{ quantity: number; unit_price: number }> })?.items?.reduce(
+        (sum, item) => sum + item.unit_price * item.quantity,
+        0
+      ) || 300
+
+    const price = await this.client.getDocumentPrice({
+      citySender: this.options_.senderCityRef,
+      cityRecipient: cityRef,
+      weight: pkg.weightKg,
+      cost: Math.max(declaredCost, 300),
+      serviceType: type === "courier" ? "WarehouseDoors" : "WarehouseWarehouse",
+      optionsSeat: [
+        {
+          weight: pkg.weightKg,
+          volumetricLength: pkg.lengthCm,
+          volumetricWidth: pkg.widthCm,
+          volumetricHeight: pkg.heightCm,
+        },
+      ],
+    })
+
+    return price?.Cost ?? 0
+  }
+
   async validateFulfillmentData(
     optionData: Record<string, unknown>,
     data: Record<string, unknown>,
@@ -162,13 +219,32 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
         )
       }
 
-      return {
+      const result = {
         carrier: "nova-poshta",
         type,
         city_ref: cityRef,
         city_name: cityName,
         comment: (data?.comment as string) || undefined,
       }
+
+      try {
+        const estimatedShippingCost = await this.computeShippingCost(
+          optionData,
+          data,
+          context
+        )
+        if (estimatedShippingCost > 0) {
+          return { ...result, estimated_shipping_cost: estimatedShippingCost }
+        }
+      } catch (error) {
+        this.logger_.warn(
+          `[nova-poshta] Failed to estimate shipping cost during validation: ${
+            (error as Error).message
+          }`
+        )
+      }
+
+      return result
     }
 
     // warehouse / postomat — city + warehouse selection is mandatory
@@ -184,7 +260,7 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
       )
     }
 
-    return {
+    const result = {
       carrier: "nova-poshta",
       type,
       city_ref: cityRef,
@@ -192,6 +268,25 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
       warehouse_ref: warehouseRef,
       warehouse_name: warehouseName,
     }
+
+    try {
+      const estimatedShippingCost = await this.computeShippingCost(
+        optionData,
+        data,
+        context
+      )
+      if (estimatedShippingCost > 0) {
+        return { ...result, estimated_shipping_cost: estimatedShippingCost }
+      }
+    } catch (error) {
+      this.logger_.warn(
+        `[nova-poshta] Failed to estimate shipping cost during validation: ${
+          (error as Error).message
+        }`
+      )
+    }
+
+    return result
   }
 
   async calculatePrice(
@@ -199,83 +294,23 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
     data: CalculateShippingOptionPriceDTO["data"],
     context: CalculateShippingOptionPriceDTO["context"]
   ): Promise<CalculatedShippingOptionPrice> {
-    const type = (optionData as Record<string, unknown>)?.type as NovaPoshtaDeliveryType
-    const cityRef = (data as Record<string, unknown>)?.city_ref as string | undefined
-
-    if (!this.options_.senderCityRef || !cityRef) {
-      // Not enough information yet (e.g. city not chosen) — fall back to 0 and
-      // let the storefront show a loading/"select a city" state instead of an error.
-      // This now also applies to courier: Nova Poshta's `InternetDocument.getDocumentPrice`
-      // requires a real `CityRecipient` Ref (per their docs, it's a mandatory
-      // parameter regardless of ServiceType) — there is no valid price to
-      // calculate without it, and silently pricing against our own sender
-      // city was the bug that made courier delivery quotes wrong for any
-      // destination other than the sender's own city.
-      return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
-    }
-
-    const items = (context?.items || []) as CartItemForSizing[]
-    console.log(`ITEMS: ${JSON.stringify(items)}`)
-    if (!items.length) {
-      // Medusa filters the cart's items down to the ones that ship under
-      // THIS option's shipping profile before calling calculatePrice (see
-      // filterCartItemsByShippingProfile in @medusajs/core-flows). An
-      // empty array here with a non-empty cart almost always means the
-      // products in the cart aren't assigned to the same Shipping Profile
-      // as this Nova Poshta shipping option — check Settings → Shipping
-      // Profiles and each product's "Shipping profile" field in Admin.
-      // (It is NOT something this provider can fix — by the time
-      // calculatePrice runs, the filtering has already happened.)
-      this.logger_.warn(
-        "[nova-poshta] calculatePrice received an empty items list. If the cart " +
-          "actually has items, this option's Shipping Profile likely doesn't match " +
-          "the products' Shipping Profile — check Settings → Shipping Profiles in Admin. " +
-          "Falling back to default weight/dimensions for pricing."
-      )
-    }
-
-    const pkg = estimatePackage(items, {
-      weightKg: this.options_.defaultItemWeightKg ?? DEFAULT_ITEM_WEIGHT_KG,
-      dimensionCm: this.options_.defaultItemDimensionCm ?? DEFAULT_ITEM_DIMENSION_CM,
-    })
-
-    const declaredCost =
-      (context as { items?: Array<{ quantity: number; unit_price: number }> })?.items?.reduce(
-        (sum, item) => sum + item.unit_price * item.quantity,
-        0
-      ) || 300
-
+    // Still run the live tariff lookup so logs/monitoring reflect real
+    // carrier quotes, but never bill the customer for delivery.
     try {
-      const price = await this.client.getDocumentPrice({
-        citySender: this.options_.senderCityRef,
-        cityRecipient: cityRef,
-        // Kept as a same-value fallback for API versions/edge cases that
-        // require a top-level Weight even when OptionsSeat is present.
-        weight: pkg.weightKg,
-        cost: Math.max(declaredCost, 300),
-        serviceType: type === "courier" ? "WarehouseDoors" : "WarehouseWarehouse",
-        optionsSeat: [
-          {
-            weight: pkg.weightKg,
-            volumetricLength: pkg.lengthCm,
-            volumetricWidth: pkg.widthCm,
-            volumetricHeight: pkg.heightCm,
-          },
-        ],
-      })
-
-      return {
-        calculated_amount: price?.Cost ?? 0,
-        is_calculated_price_tax_inclusive: true,
-      }
+      await this.computeShippingCost(
+        optionData as Record<string, unknown>,
+        data as Record<string, unknown>,
+        context as Record<string, unknown>
+      )
     } catch (error) {
       this.logger_.warn(
         `[nova-poshta] Failed to calculate live price, falling back to 0: ${
           (error as Error).message
         }`
       )
-      return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
     }
+
+    return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
   }
 
   /**

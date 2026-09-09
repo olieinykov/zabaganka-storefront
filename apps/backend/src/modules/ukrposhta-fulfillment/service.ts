@@ -57,12 +57,47 @@ class UkrposhtaFulfillmentProviderService extends AbstractFulfillmentProviderSer
     return true
   }
 
+  private async computeShippingCost(
+    data: Record<string, unknown>,
+    context: Record<string, unknown>
+  ): Promise<number> {
+    const cityRef = data?.city_ref as string | undefined
+    const items = (context?.items || []) as Array<{
+      quantity: number
+      variant?: { weight?: number | null }
+    }>
+    const weight =
+      items.reduce((sum, item) => sum + (item.variant?.weight || 0.5) * item.quantity, 0) || 1
+
+    return this.client.calculatePrice({
+      cityId: cityRef || this.options_.senderCityRef || "kyiv",
+      weight,
+    })
+  }
+
   async validateFulfillmentData(
     optionData: Record<string, unknown>,
     data: Record<string, unknown>,
     context: Record<string, unknown>
   ): Promise<any> {
     const type = optionData?.type as UkrposhtaDeliveryType
+
+    const attachEstimatedCost = async (result: Record<string, unknown>) => {
+      try {
+        const estimatedShippingCost = await this.computeShippingCost(data, context)
+        if (estimatedShippingCost > 0) {
+          return { ...result, estimated_shipping_cost: estimatedShippingCost }
+        }
+      } catch (error) {
+        this.logger_.warn(
+          `[ukrposhta] Failed to estimate shipping cost during validation: ${
+            (error as Error).message
+          }`
+        )
+      }
+
+      return result
+    }
 
     if (type === "courier") {
       const shippingAddress = context?.shipping_address as
@@ -76,11 +111,11 @@ class UkrposhtaFulfillmentProviderService extends AbstractFulfillmentProviderSer
         )
       }
 
-      return {
+      return attachEstimatedCost({
         carrier: "ukrposhta",
         type,
         comment: (data?.comment as string) || undefined,
-      }
+      })
     }
 
     const cityRef = data?.city_ref as string
@@ -95,43 +130,33 @@ class UkrposhtaFulfillmentProviderService extends AbstractFulfillmentProviderSer
       )
     }
 
-    return {
+    return attachEstimatedCost({
       carrier: "ukrposhta",
       type,
       city_ref: cityRef,
       city_name: cityName,
       warehouse_ref: warehouseRef,
       warehouse_name: warehouseName,
-    }
+    })
   }
 
   async calculatePrice(
-    optionData: CalculateShippingOptionPriceDTO["optionData"],
+    _optionData: CalculateShippingOptionPriceDTO["optionData"],
     data: CalculateShippingOptionPriceDTO["data"],
     context: CalculateShippingOptionPriceDTO["context"]
   ): Promise<CalculatedShippingOptionPrice> {
-    const cityRef = (data as Record<string, unknown>)?.city_ref as string | undefined
-
-    const items = (context?.items || []) as Array<{
-      quantity: number
-      variant?: { weight?: number | null }
-    }>
-    const weight =
-      items.reduce((sum, item) => sum + (item.variant?.weight || 0.5) * item.quantity, 0) || 1
-
     try {
-      const cost = await this.client.calculatePrice({
-        cityId: cityRef || this.options_.senderCityRef || "kyiv",
-        weight,
-      })
-
-      return { calculated_amount: cost, is_calculated_price_tax_inclusive: true }
+      await this.computeShippingCost(
+        data as Record<string, unknown>,
+        context as Record<string, unknown>
+      )
     } catch (error) {
       this.logger_.warn(
         `[ukrposhta] Failed to calculate price, falling back to 0: ${(error as Error).message}`
       )
-      return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
     }
+
+    return { calculated_amount: 0, is_calculated_price_tax_inclusive: true }
   }
 
   /**
