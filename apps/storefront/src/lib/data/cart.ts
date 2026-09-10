@@ -29,10 +29,19 @@ export async function retrieveCart(cartId?: string, fields?: string) {
     ...(await getAuthHeaders()),
   }
 
-  const next = {
-    ...(await getCacheOptions("carts")),
-  }
-
+  // Bug this fixes: when an admin deletes a product/variant, the backend
+  // cleans up carts that reference it right away (see the
+  // `cart-cleanup-on-product-removed` subscriber) — but that happens in a
+  // different process than the storefront, which has no way to tell this
+  // Next.js server to drop its cached copy of the cart (the cache tag for
+  // carts is scoped per browser session via the `_medusa_cache_id` cookie,
+  // so the backend can't reconstruct it from just a cart id). With
+  // `cache: "force-cache"` here, the storefront kept serving the old
+  // cached snapshot — still showing the deleted item — until something on
+  // the storefront side happened to bust that tag itself, which is why
+  // only a hard refresh (bypassing the cache entirely) showed the correct
+  // cart. Cart contents are inherently per-user, fast-changing data, so we
+  // just always fetch them fresh instead of caching them.
   return await sdk.client
     .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
       method: "GET",
@@ -40,8 +49,7 @@ export async function retrieveCart(cartId?: string, fields?: string) {
         fields,
       },
       headers,
-      next,
-      cache: "force-cache",
+      cache: "no-store",
     })
     .then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
     .catch(() => null)
@@ -87,6 +95,50 @@ export async function getOrSetCart(countryCode: string) {
   }
 
   return cart
+}
+
+export async function pruneUnavailableCartItems(): Promise<{
+  removed: string[]
+}> {
+  const cartId = await getCartId()
+  if (!cartId) {
+    return { removed: [] }
+  }
+
+  const cart = await retrieveCart(cartId)
+  if (!cart?.items?.length) {
+    return { removed: [] }
+  }
+
+  const staleItems = cart.items.filter((item) => !item.product || !item.variant)
+
+  if (!staleItems.length) {
+    return { removed: [] }
+  }
+
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  await Promise.all(
+    staleItems.map((item) =>
+      sdk.store.cart
+        .deleteLineItem(cart.id, item.id, {}, headers)
+        .catch(() => null)
+    )
+  )
+
+  const cartCacheTag = await getCacheTag("carts")
+  updateTag(cartCacheTag)
+
+  const fulfillmentCacheTag = await getCacheTag("fulfillment")
+  updateTag(fulfillmentCacheTag)
+
+  return {
+    removed: staleItems.map(
+      (item) => item.product_title || item.title || "Товар"
+    ),
+  }
 }
 
 export async function updateCart(data: HttpTypes.StoreUpdateCart) {

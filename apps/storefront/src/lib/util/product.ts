@@ -4,6 +4,12 @@ export const isSimpleProduct = (product: HttpTypes.StoreProduct): boolean => {
     return product.options?.length === 1 && product.options[0].values?.length === 1;
 }
 
+export const isDefaultOption = (
+  option: Pick<HttpTypes.StoreProductOption, "title">
+): boolean => {
+  return (option.title ?? "").trim().toLowerCase() === "default option"
+}
+
 export const optionsAsKeymap = (
   variantOptions: HttpTypes.StoreProductVariant["options"]
 ): Record<string, string> | undefined => {

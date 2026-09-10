@@ -8,7 +8,7 @@ import { Button } from "@modules/common/components/ui"
 import Divider from "@modules/common/components/divider"
 import { useToast } from "@modules/common/components/toast"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
-import { isVariantInStock, optionsAsKeymap } from "@lib/util/product"
+import { isVariantInStock, isDefaultOption, optionsAsKeymap } from "@lib/util/product"
 import NotifyMeModal from "@modules/products/components/notify-me-modal"
 import { isEqual } from "lodash"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -90,6 +90,10 @@ export default function ProductActions({
   }, [product.variants, options])
 
   useEffect(() => {
+    if ((product.variants?.length ?? 0) <= 1) {
+      return
+    }
+
     const params = new URLSearchParams(searchParams.toString())
     const value = isValidVariant ? selectedVariant?.id : null
 
@@ -104,7 +108,7 @@ export default function ProductActions({
     }
 
     router.replace(pathname + "?" + params.toString())
-  }, [selectedVariant, isValidVariant])
+  }, [selectedVariant, isValidVariant, product.variants])
 
   const inStock = useMemo(() => {
     return isVariantInStock(selectedVariant)
@@ -142,7 +146,9 @@ export default function ProductActions({
         <div>
           {(product.variants?.length ?? 0) > 1 ? (
             <div className="flex flex-col gap-y-4">
-              {(product.options || []).map((option) => {
+              {(product.options || [])
+                .filter((option) => !isDefaultOption(option))
+                .map((option) => {
                 return (
                   <div key={option.id}>
                     <OptionSelect
@@ -161,28 +167,36 @@ export default function ProductActions({
               <Divider />
             </div>
           ) : (
-            !!product.options?.length && (
-              <div className="flex flex-col gap-y-1.5">
-                {product.options.map((option) => {
-                  const value = selectedVariant
-                    ? optionsAsKeymap(selectedVariant.options)?.[option.id]
-                    : option.values?.[0]?.value
+            (() => {
+              const realOptions = (product.options || []).filter(
+                (option) => !isDefaultOption(option)
+              )
 
-                  if (!value) return null
+              return (
+                !!realOptions.length && (
+                  <div className="flex flex-col gap-y-1.5">
+                    {realOptions.map((option) => {
+                      const value = selectedVariant
+                        ? optionsAsKeymap(selectedVariant.options)?.[option.id]
+                        : option.values?.[0]?.value
 
-                  return (
-                    <div
-                      key={option.id}
-                      className="flex items-center gap-x-2 text-sm"
-                    >
-                      <span className="text-ui-fg-subtle">{option.title}:</span>
-                      <span className="text-ui-fg-base font-medium">{value}</span>
-                    </div>
-                  )
-                })}
-                <Divider />
-              </div>
-            )
+                      if (!value) return null
+
+                      return (
+                        <div
+                          key={option.id}
+                          className="flex items-center gap-x-2 text-sm"
+                        >
+                          <span className="text-ui-fg-subtle">{option.title}:</span>
+                          <span className="text-ui-fg-base font-medium">{value}</span>
+                        </div>
+                      )
+                    })}
+                    <Divider />
+                  </div>
+                )
+              )
+            })()
           )}
         </div>
 

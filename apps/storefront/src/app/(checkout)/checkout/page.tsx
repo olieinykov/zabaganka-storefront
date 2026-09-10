@@ -1,6 +1,7 @@
 import { retrieveCart } from "@lib/data/cart"
 import { retrieveCustomer } from "@lib/data/customer"
 import { CHECKOUT_STEPS, getCheckoutStep } from "@lib/util/get-checkout-step"
+import CartAvailabilityGuard from "@modules/cart/components/cart-availability-guard"
 import PaymentWrapper from "@modules/checkout/components/payment-wrapper"
 import CheckoutForm from "@modules/checkout/templates/checkout-form"
 import CheckoutSummary from "@modules/checkout/templates/checkout-summary"
@@ -41,6 +42,7 @@ export default async function Checkout({ searchParams }: Props) {
 
   return (
     <div className="grid grid-cols-1 small:grid-cols-[1fr_416px] content-container gap-x-16 large:gap-x-24">
+      <CartAvailabilityGuard />
       <PaymentWrapper cart={cart}>
         <CheckoutForm cart={cart} customer={customer} />
       </PaymentWrapper>
