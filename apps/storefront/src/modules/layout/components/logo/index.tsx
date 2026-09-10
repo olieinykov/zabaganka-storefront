@@ -25,14 +25,14 @@ export default function Logo({
       >
         ZABAGANKA
       </span>
-      <span
+      {/*<span
         className={clx(
           "text-[9px] small:text-[10px] tracking-[0.4em] mt-1",
           variant === "dark" ? "text-graphite" : "text-white/70"
         )}
       >
         BOUTIQUE
-      </span>
+      </span>*/}
     </LocalizedClientLink>
   )
 }
