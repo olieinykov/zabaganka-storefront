@@ -1,7 +1,7 @@
 "use client"
 
 import * as Accordion from "@radix-ui/react-accordion"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { ChevronDownMini } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
@@ -19,12 +19,6 @@ const OptionsPicker = ({
   setOptionValueIds,
 }: OptionsPickerProps) => {
   const [openItems, setOpenItems] = useState<string[]>([])
-
-  useEffect(() => {
-    if (options.length) {
-      setOpenItems(options.map((option) => option.id))
-    }
-  }, [options])
 
   if (!options.length) {
     return null
@@ -110,8 +104,9 @@ const OptionsPicker = ({
                       <button
                         key={value.id}
                         onClick={() => toggleValue(value.id)}
+                        title={value.label}
                         className={clsx(
-                          "border-ui-border-base border text-small-regular h-10 rounded-rounded px-3 flex items-center transition-colors duration-150",
+                          "border-ui-border-base border text-small-regular h-10 max-w-[12rem] rounded-rounded px-3 flex items-center transition-colors duration-150",
                           {
                             "border-ui-border-interactive text-ui-fg-base":
                               isSelected,
@@ -121,7 +116,7 @@ const OptionsPicker = ({
                         )}
                         aria-pressed={isSelected}
                       >
-                        {value.label}
+                        <span className="truncate">{value.label}</span>
                       </button>
                     )
                   })}

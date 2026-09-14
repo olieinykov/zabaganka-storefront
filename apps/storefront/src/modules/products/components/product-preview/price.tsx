@@ -1,5 +1,5 @@
 import { clx } from "@modules/common/components/ui"
-import { VariantPrice } from "types/global"
+import { VariantPrice } from "../../../../types/global"
 
 export default async function PreviewPrice({ price }: { price: VariantPrice }) {
   if (!price) {
@@ -7,7 +7,7 @@ export default async function PreviewPrice({ price }: { price: VariantPrice }) {
   }
 
   return (
-    <div className="flex flex-col items-end">
+    <div className="flex flex-col">
       {price.price_type === "sale" && (
         <span
           className="text-xs line-through text-graphite"

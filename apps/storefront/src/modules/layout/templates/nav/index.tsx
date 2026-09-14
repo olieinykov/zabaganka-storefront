@@ -37,7 +37,7 @@ export default async function Nav({
       <AnnouncementBar>Допоможемо підібрати розмір і модель</AnnouncementBar>
       <header className="bg-ivory border-b border-line">
         <div className="content-container">
-          <div className="grid grid-cols-[auto_1fr_auto] small:grid-cols-[1fr_auto_1fr] items-center h-16 small:h-18 gap-4">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center h-16 small:h-18 gap-4">
             <div className="flex items-center gap-8">
               <MobileMenuTrigger links={navLinks} />
             </div>

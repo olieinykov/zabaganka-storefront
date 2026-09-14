@@ -1,7 +1,8 @@
 "use client"
 
+import { Dialog, DialogPanel, Transition, TransitionChild } from "@headlessui/react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useMemo } from "react"
+import { Fragment, useCallback, useMemo, useState } from "react"
 
 import {
   IN_STOCK_ONLY_QUERY_KEY,
@@ -9,6 +10,8 @@ import {
   parseOptionValueIds,
 } from "@lib/util/product-option-filters"
 import { HttpTypes } from "@medusajs/types"
+import Filter from "@modules/common/icons/filter"
+import X from "@modules/common/icons/x"
 import OptionsPicker from "./options-picker"
 import SortProducts, { SortOptions } from "./sort-products"
 
@@ -29,6 +32,7 @@ const RefinementList = ({
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const updateQueryParams = useCallback(
     (updater: (params: URLSearchParams) => void) => {
@@ -45,7 +49,7 @@ const RefinementList = ({
         : pathname
 
       if (nextPath !== currentPath) {
-        router.push(nextPath)
+        router.push(nextPath, { scroll: false })
       }
     },
     [pathname, router, searchParams]
@@ -78,8 +82,11 @@ const RefinementList = ({
       }
     })
 
-  return (
-    <div className="flex flex-col gap-12 py-4 mb-8 small:px-0 pl-6 small:flex-[0_0_20%] small:ml-[1.675rem]">
+  const activeFilterCount =
+    selectedOptionValueIds.length + (inStockOnly ? 1 : 0)
+
+  const controls = (
+    <>
       <SortProducts
         sortBy={sortBy}
         setQueryParams={setQueryParams}
@@ -109,7 +116,93 @@ const RefinementList = ({
           setOptionValueIds={setOptionValueIds}
         />
       )}
-    </div>
+    </>
+  )
+
+  return (
+    <>
+      <div className="hidden small:flex flex-col gap-12 py-4 mb-8 small:flex-[0_0_20%] small:ml-[1.675rem]">
+        {controls}
+      </div>
+
+      <div className="small:hidden flex justify-end">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="inline-flex items-center gap-2 border border-line rounded-rounded px-4 py-2.5 text-sm text-ink interactive"
+          data-testid="mobile-filters-button"
+        >
+          <Filter size={15} />
+          Фільтри
+          {activeFilterCount > 0 && (
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-circle bg-gold px-1 text-[11px] text-white">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      <Transition show={mobileOpen} as={Fragment as React.ElementType}>
+        <Dialog
+          as="div"
+          className="relative z-[90] small:hidden"
+          onClose={() => setMobileOpen(false)}
+        >
+          <TransitionChild
+            as={Fragment as React.ElementType}
+            enter="ease-out duration-200"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-150"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-ink/40" />
+          </TransitionChild>
+
+          <div className="fixed inset-x-0 bottom-0">
+            <TransitionChild
+              as={Fragment as React.ElementType}
+              enter="ease-out duration-200"
+              enterFrom="translate-y-full"
+              enterTo="translate-y-0"
+              leave="ease-in duration-150"
+              leaveFrom="translate-y-0"
+              leaveTo="translate-y-full"
+            >
+              <DialogPanel className="flex max-h-[85vh] w-full flex-col rounded-t-2xl bg-ivory">
+                <div className="flex items-center justify-between border-b border-line px-6 py-5">
+                  <span className="font-display text-xl text-ink">
+                    Фільтри
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    aria-label="Закрити фільтри"
+                    className="interactive text-ink"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-12 overflow-y-auto px-6 py-6">
+                  {controls}
+                </div>
+                <div className="border-t border-line px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full rounded-rounded bg-navy py-3 text-sm text-white interactive"
+                    data-testid="apply-mobile-filters-button"
+                  >
+                    Показати результати
+                  </button>
+                </div>
+              </DialogPanel>
+            </TransitionChild>
+          </div>
+        </Dialog>
+      </Transition>
+    </>
   )
 }
 

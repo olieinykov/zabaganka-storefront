@@ -59,7 +59,7 @@ export default async function ProductPreview({
             {categoryName}
           </span>
         )}
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-col gap-1 small:flex-row small:items-start small:justify-between small:gap-2">
           <LocalizedClientLink href={`/products/${product.handle}`}>
             <h3
               className="font-display text-lg leading-snug text-navy hover:text-gold interactive"
@@ -69,7 +69,7 @@ export default async function ProductPreview({
             </h3>
           </LocalizedClientLink>
           {cheapestPrice && (
-            <div className="shrink-0 pt-0.5">
+            <div className="shrink-0 small:pt-0.5">
               <PreviewPrice price={cheapestPrice} />
             </div>
           )}

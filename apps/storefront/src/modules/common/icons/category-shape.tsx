@@ -1,4 +1,4 @@
-import { IconProps } from "types/icon"
+import { IconProps } from "../../../types/icon"
 
 type Shape = "diamond" | "circle" | "square"
 

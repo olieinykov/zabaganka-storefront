@@ -103,21 +103,23 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             <div className={clx("grid grid-cols-2 w-full gap-x-4", {
               "!grid-cols-1": isSimple
             })}>
-              {!isSimple && <Button
-                onClick={open}
-                variant="secondary"
-                className="w-full"
-                data-testid="mobile-actions-button"
-              >
-                <div className="flex items-center justify-between w-full">
-                  <span>
-                    {variant
-                      ? Object.values(options).join(" / ")
-                      : "Оберіть варіант"}
-                  </span>
-                  <ChevronDown />
-                </div>
-              </Button>}
+              {!isSimple && (
+                <Button
+                  onClick={open}
+                  variant="secondary"
+                  className="w-full"
+                  data-testid="mobile-actions-button"
+                >
+                  <div className="flex items-center justify-between w-full min-w-0 gap-x-2">
+                    <span className="truncate block text-left">
+                      {variant
+                        ? Object.values(options).join(" / ")
+                        : "Оберіть варіант"}
+                    </span>
+                    <ChevronDown className="shrink-0" />
+                  </div>
+                </Button>
+              )}
               <Button
                 onClick={variant && !inStock ? onNotifyMe : handleAddToCart}
                 disabled={!variant || (inStock && isAdding)}
