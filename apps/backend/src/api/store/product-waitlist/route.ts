@@ -1,7 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import { Resend } from "resend"
 import { PRODUCT_WAITLIST_MODULE } from "../../../modules/product-waitlist"
 import ProductWaitlistModuleService from "../../../modules/product-waitlist/service"
+import { waitlistRegisteredEmail } from "../../../modules/resend/templates/waitlist-registered"
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 // +380 followed by exactly 9 digits (Ukrainian mobile numbers).
@@ -116,5 +118,71 @@ export async function POST(
     phone: normalizedPhone,
   })
 
+  // Best-effort confirmation that the request was registered. We only have
+  // an email channel available (no SMS provider configured), so phone-based
+  // entries don't get this. Never let a failure here block the response -
+  // the waitlist entry itself was already created successfully.
+  if (contact_method === "email" && normalizedEmail) {
+    void sendWaitlistRegisteredEmail({
+      email: normalizedEmail,
+      productTitle: product.title,
+      productHandle: product.handle!,
+      productThumbnail: product.thumbnail || null,
+      variantTitle,
+      variantId: variant_id || null,
+    })
+  }
+
   res.status(201).json({ entry })
+}
+
+async function sendWaitlistRegisteredEmail(params: {
+  email: string
+  productTitle: string
+  productHandle: string
+  productThumbnail: string | null
+  variantTitle: string | null
+  variantId: string | null
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  const from = process.env.RESEND_FROM_EMAIL
+  const storefrontUrl = process.env.STOREFRONT_URL
+
+  if (!apiKey || !from || !storefrontUrl) {
+    console.error(
+      "[product-waitlist] Не надіслано лист-підтвердження реєстрації: не налаштовано RESEND_API_KEY / RESEND_FROM_EMAIL / STOREFRONT_URL"
+    )
+    return
+  }
+
+  try {
+    const resend = new Resend(apiKey)
+    const html = waitlistRegisteredEmail({
+      productTitle: params.productTitle,
+      productHandle: params.productHandle,
+      variantTitle: params.variantTitle,
+      productThumbnail: params.productThumbnail,
+      storefrontUrl,
+      variantId: params.variantId,
+    })
+
+    const { error } = await resend.emails.send({
+      from,
+      to: [params.email],
+      subject: "Заявку прийнято — Zabaganka Boutique",
+      html,
+    })
+
+    if (error) {
+      console.error(
+        "[product-waitlist] Помилка надсилання листа-підтвердження реєстрації:",
+        error.message
+      )
+    }
+  } catch (err) {
+    console.error(
+      "[product-waitlist] Помилка надсилання листа-підтвердження реєстрації:",
+      err
+    )
+  }
 }

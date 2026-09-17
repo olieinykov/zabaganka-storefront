@@ -341,28 +341,31 @@ export async function initiatePaymentSession(
     .catch(medusaError)
 }
 
-export async function applyPromotions(codes: string[]) {
-  const cartId = await getCartId()
-
-  if (!cartId) {
-    throw new Error("No existing cart found")
-  }
-
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
-  return sdk.store.cart
-    .update(cartId, { promo_codes: codes }, {}, headers)
-    .then(async () => {
-      const cartCacheTag = await getCacheTag("carts")
-      updateTag(cartCacheTag)
-
-      const fulfillmentCacheTag = await getCacheTag("fulfillment")
-      updateTag(fulfillmentCacheTag)
-    })
-    .catch(medusaError)
-}
+// PROMO CODE FEATURE
+// Applying promo codes to the cart is disabled on the storefront. Kept
+// commented out in case this needs to be re-enabled later.
+// export async function applyPromotions(codes: string[]) {
+//   const cartId = await getCartId()
+//
+//   if (!cartId) {
+//     throw new Error("No existing cart found")
+//   }
+//
+//   const headers = {
+//     ...(await getAuthHeaders()),
+//   }
+//
+//   return sdk.store.cart
+//     .update(cartId, { promo_codes: codes }, {}, headers)
+//     .then(async () => {
+//       const cartCacheTag = await getCacheTag("carts")
+//       updateTag(cartCacheTag)
+//
+//       const fulfillmentCacheTag = await getCacheTag("fulfillment")
+//       updateTag(fulfillmentCacheTag)
+//     })
+//     .catch(medusaError)
+// }
 
 export async function applyGiftCard(code: string) {
   //   const cartId = getCartId()
@@ -407,17 +410,18 @@ export async function removeGiftCard(
   //   }
 }
 
-export async function submitPromotionForm(
-  currentState: unknown,
-  formData: FormData
-) {
-  const code = formData.get("code") as string
-  try {
-    await applyPromotions([code])
-  } catch (e: any) {
-    return e.message
-  }
-}
+// PROMO CODE FEATURE
+// export async function submitPromotionForm(
+//   currentState: unknown,
+//   formData: FormData
+// ) {
+//   const code = formData.get("code") as string
+//   try {
+//     await applyPromotions([code])
+//   } catch (e: any) {
+//     return e.message
+//   }
+// }
 
 // TODO: Pass a POJO instead of a form entity here
 export async function setAddresses(currentState: unknown, formData: FormData) {

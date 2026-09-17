@@ -1,7 +1,8 @@
 import { Heading } from "@modules/common/components/ui"
 
 import ItemsPreviewTemplate from "@modules/cart/templates/preview"
-import DiscountCode from "@modules/checkout/components/discount-code"
+// PROMO CODE FEATURE
+// import DiscountCode from "@modules/checkout/components/discount-code"
 import CartTotals from "@modules/common/components/cart-totals"
 import Divider from "@modules/common/components/divider"
 import { HttpTypes } from "@medusajs/types"
@@ -20,9 +21,11 @@ const CheckoutSummary = ({ cart }: { cart: HttpTypes.StoreCart }) => {
         <Divider className="my-6" />
         <CartTotals totals={cart} />
         <ItemsPreviewTemplate cart={cart} />
+        {/* PROMO CODE FEATURE
         <div className="my-6">
           <DiscountCode cart={cart} />
         </div>
+        */}
       </div>
     </div>
   )

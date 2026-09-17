@@ -1,5 +1,25 @@
 "use client"
 
+// PROMO CODE FEATURE
+// The ability to enter/apply a promo code at checkout and in the cart has
+// been disabled. The original implementation is kept below, commented out,
+// in case this needs to be re-enabled later.
+
+import { HttpTypes } from "@medusajs/types"
+import React from "react"
+
+type DiscountCodeProps = {
+  cart: HttpTypes.StoreCart
+}
+
+const DiscountCode: React.FC<DiscountCodeProps> = () => {
+  return null
+}
+
+export default DiscountCode
+
+/* PROMO CODE FEATURE - original implementation, disabled
+
 import { Badge, Heading, Input, Label, Text } from "@modules/common/components/ui"
 import React from "react"
 
@@ -66,10 +86,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
             >
               Додати промокод(и)
             </button>
-
-            {/* <Tooltip content="You can add multiple promotion codes">
-              <InformationCircleSolid color="var(--fg-muted)" />
-            </Tooltip> */}
           </Label>
 
           {isOpen && (
@@ -137,11 +153,6 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
                             </>
                           )}
                         )
-                        {/* {promotion.is_automatic && (
-                          <Tooltip content="This promotion is automatically applied">
-                            <InformationCircleSolid className="inline text-zinc-400" />
-                          </Tooltip>
-                        )} */}
                       </span>
                     </Text>
                     {!promotion.is_automatic && (
@@ -174,3 +185,5 @@ const DiscountCode: React.FC<DiscountCodeProps> = ({ cart }) => {
 }
 
 export default DiscountCode
+
+*/
