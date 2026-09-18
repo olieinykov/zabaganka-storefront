@@ -49,7 +49,7 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
                     )
                   })
               : repeat(5).map((i) => {
-                  return <SkeletonLineItem key={i} />
+                  return <SkeletonLineItem key={i} type="full" />
                 })}
           </Table.Body>
         </Table>
