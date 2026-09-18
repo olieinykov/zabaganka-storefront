@@ -13,12 +13,12 @@ export default function CheckoutLayout({
         <nav className="grid grid-cols-[1fr_auto_1fr] h-full items-center content-container">
           <LocalizedClientLink
             href="/cart"
-            className="interactive text-sm text-graphite hover:text-navy flex items-center gap-x-1.5 h-full pr-8 -ml-3 pl-3"
+            className="interactive text-sm text-graphite hover:text-navy inline-flex items-center gap-x-1.5 w-fit py-2 px-1 rounded-md"
             data-testid="back-to-cart-link"
           >
             <ChevronDown className="rotate-90" size={16} />
             <span className="hidden small:block">До кошика</span>
-            <span className="hidden min-[400px]:block small:hidden">Назад</span>
+            <span className="hidden min-[640px]:block small:hidden">Назад</span>
           </LocalizedClientLink>
           <Logo className="justify-self-center" />
           <div />

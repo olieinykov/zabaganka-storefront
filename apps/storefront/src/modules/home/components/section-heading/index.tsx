@@ -13,7 +13,7 @@ export default function SectionHeading({
   linkLabel?: string
 }) {
   return (
-    <div className="flex items-end justify-between mb-8 gap-4 max-[425px]:flex-col max-[425px]:items-start">
+    <div className="flex items-end justify-between mb-8 gap-4 max-[510px]:flex-col max-[510px]:items-start">
       <div>
         <span className="text-xs uppercase tracking-[0.2em] text-gold font-semibold">
           {eyebrow}
