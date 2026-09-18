@@ -5,7 +5,7 @@ import { initiatePaymentSession } from "@lib/data/cart"
 import { isMonoSessionStillPayable } from "@lib/data/mono"
 import { fetchPrepaymentSettings } from "@lib/data/checkout-options"
 import { convertToLocale } from "@lib/util/money"
-import { CheckCircleSolid, CreditCard } from "@medusajs/icons"
+import { CheckCircleSolid, CreditCard, PencilSquareSolid } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
   StripeCardContainer,
@@ -149,11 +149,11 @@ const Payment = ({
 
   return (
     <div className="bg-ivory">
-      <div className="flex flex-row items-center justify-between mb-6">
+      <div className="flex flex-row items-center justify-between mb-6 gap-x-4">
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-3xl-regular gap-x-2 items-center",
             {
               "opacity-50 pointer-events-none select-none":
                 !isOpen && !paymentReady,
@@ -161,16 +161,17 @@ const Payment = ({
           )}
         >
           Оплата
-          {!isOpen && paymentReady && <CheckCircleSolid />}
+          {!isOpen && paymentReady && <CheckCircleSolid className="flex-shrink-0" />}
         </Heading>
         {!isOpen && paymentReady && (
           <Text>
             <button
               onClick={handleEdit}
-              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover flex items-center justify-center p-2 sm:p-0"
               data-testid="edit-payment-button"
             >
-              Редагувати
+              <span className="hidden sm:inline">Редагувати</span>
+              <PencilSquareSolid className="sm:hidden w-5 h-5" />
             </button>
           </Text>
         )}
@@ -290,8 +291,8 @@ const Payment = ({
 
         <div className={isOpen ? "hidden" : "block"}>
           {cart && paymentReady && activeSession ? (
-            <div className="flex items-start gap-x-1 w-full">
-              <div className="flex flex-col w-1/3">
+            <div className="flex flex-col md:flex-row items-start gap-y-6 md:gap-y-0 gap-x-4 md:gap-x-8 w-full">
+              <div className="flex flex-col w-full md:w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Спосіб оплати
                 </Text>
@@ -303,7 +304,7 @@ const Payment = ({
                     activeSession?.provider_id}
                 </Text>
               </div>
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full md:w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Платіжні реквізити
                 </Text>
@@ -325,7 +326,7 @@ const Payment = ({
               </div>
             </div>
           ) : paidByGiftcard ? (
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-full md:w-1/3">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Спосіб оплати
               </Text>

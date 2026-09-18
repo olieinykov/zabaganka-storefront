@@ -2,7 +2,7 @@
 import { setAddresses } from "@lib/data/cart"
 import useToggleState from "@lib/hooks/use-toggle-state"
 import compareAddresses from "@lib/util/compare-addresses"
-import { CheckCircleSolid } from "@medusajs/icons"
+import { CheckCircleSolid, PencilSquareSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import Divider from "@modules/common/components/divider"
 import { Heading, Text } from "@modules/common/components/ui"
@@ -41,22 +41,23 @@ const Addresses = ({
 
   return (
     <div className="bg-ivory">
-      <div className="flex flex-row items-center justify-between mb-6">
+      <div className="flex flex-row items-center justify-between mb-6 gap-x-4">
         <Heading
           level="h2"
-          className="flex flex-row text-3xl-regular gap-x-2 items-baseline"
+          className="flex flex-row text-3xl-regular gap-x-2 items-center"
         >
           Адреса доставки
-          {!isOpen && <CheckCircleSolid />}
+          {!isOpen && <CheckCircleSolid className="flex-shrink-0" />}
         </Heading>
         {!isOpen && cart?.shipping_address && (
           <Text>
             <button
               onClick={handleEdit}
-              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+              className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover flex items-center justify-center p-2 sm:p-0"
               data-testid="edit-address-button"
             >
-              Редагувати
+              <span className="hidden sm:inline">Редагувати</span>
+              <PencilSquareSolid className="sm:hidden w-5 h-5" />
             </button>
           </Text>
         )}
@@ -94,9 +95,9 @@ const Addresses = ({
           <div className="text-small-regular">
             {cart && cart.shipping_address ? (
               <div className="flex items-start gap-x-8">
-                <div className="flex items-start gap-x-1 w-full">
+                <div className="flex flex-col md:flex-row items-start gap-y-6 md:gap-y-0 gap-x-4 w-full">
                   <div
-                    className="flex flex-col w-1/3"
+                    className="flex flex-col w-full md:w-1/3"
                     data-testid="shipping-address-summary"
                   >
                     <Text className="txt-medium-plus text-ui-fg-base mb-1">
@@ -120,7 +121,7 @@ const Addresses = ({
                   </div>
 
                   <div
-                    className="flex flex-col w-1/3 "
+                    className="flex flex-col w-full md:w-1/3"
                     data-testid="shipping-contact-summary"
                   >
                     <Text className="txt-medium-plus text-ui-fg-base mb-1">
@@ -135,7 +136,7 @@ const Addresses = ({
                   </div>
 
                   <div
-                    className="flex flex-col w-1/3"
+                    className="flex flex-col w-full md:w-1/3"
                     data-testid="billing-address-summary"
                   >
                     <Text className="txt-medium-plus text-ui-fg-base mb-1">

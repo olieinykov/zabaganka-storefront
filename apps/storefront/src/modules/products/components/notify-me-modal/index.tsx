@@ -169,12 +169,11 @@ export default function NotifyMeModal({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              autoFocus
-              className="w-full h-10 border border-ui-border-base rounded-md px-3 text-sm mb-2"
+              className="w-full h-10 border border-ui-border-base rounded-md px-3 text-base mb-2"
             />
           ) : (
             <div className="flex items-center border border-ui-border-base rounded-md mb-2 overflow-hidden">
-              <span className="px-3 text-sm text-ui-fg-subtle bg-ui-bg-subtle h-10 flex items-center">
+              <span className="px-3 text-base text-ui-fg-subtle bg-ui-bg-subtle h-10 flex items-center">
                 {PHONE_PREFIX}
               </span>
               <input
@@ -183,8 +182,7 @@ export default function NotifyMeModal({
                 value={phoneDigits}
                 onChange={(e) => handlePhoneChange(e.target.value)}
                 placeholder="991234567"
-                autoFocus
-                className="flex-1 h-10 px-3 text-sm outline-none"
+                className="flex-1 h-10 px-3 text-base outline-none"
               />
             </div>
           )}

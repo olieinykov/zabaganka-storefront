@@ -48,7 +48,7 @@ const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
       <div>
         {payment && (
           <div className="flex items-start max-[520px]:flex-col gap-x-1 max-[520px]:gap-4 w-full">
-            <div className="flex flex-col w-1/3">
+            <div className="flex flex-col w-1/3 max-[520px]:w-full">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Спосіб оплати
               </Text>
@@ -59,11 +59,11 @@ const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
                 {paymentInfoMap[payment.provider_id].title}
               </Text>
             </div>
-            <div className="flex flex-col w-2/3">
+            <div className="flex flex-col w-2/3 max-[520px]:w-full">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
                 Платіжні реквізити
               </Text>
-              <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center">
+              <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center max-[520px]:flex-col max-[520px]:items-start">
                 <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
                   {paymentInfoMap[payment.provider_id].icon}
                 </Container>

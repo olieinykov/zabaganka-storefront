@@ -100,18 +100,23 @@ const MobileActions: React.FC<MobileActionsProps> = ({
                 <div></div>
               )}
             </div>
-            <div className={clx("grid grid-cols-2 w-full gap-x-4", {
-              "!grid-cols-1": isSimple
-            })}>
+            <div
+              className={clx(
+                "grid grid-cols-1 min-[400px]:grid-cols-2 w-full gap-2 min-[400px]:gap-x-4",
+                {
+                  "!grid-cols-1": isSimple,
+                }
+              )}
+            >
               {!isSimple && (
                 <Button
                   onClick={open}
                   variant="secondary"
-                  className="w-full"
+                  className="w-full h-auto min-h-10 py-2.5"
                   data-testid="mobile-actions-button"
                 >
                   <div className="flex items-center justify-between w-full min-w-0 gap-x-2">
-                    <span className="truncate block text-left">
+                    <span className="truncate block text-left text-sm min-[400px]:text-base leading-tight">
                       {variant
                         ? Object.values(options).join(" / ")
                         : "Оберіть варіант"}
@@ -123,15 +128,17 @@ const MobileActions: React.FC<MobileActionsProps> = ({
               <Button
                 onClick={variant && !inStock ? onNotifyMe : handleAddToCart}
                 disabled={!variant || (inStock && isAdding)}
-                className="w-full"
+                className="w-full h-auto min-h-10 py-2.5"
                 isLoading={inStock ? isAdding : false}
                 data-testid="mobile-cart-button"
               >
-                {!variant
-                  ? "Оберіть варіант"
-                  : !inStock
-                  ? "Повідомити, коли з'явиться"
-                  : "Додати до кошика"}
+                <span className="block text-center text-sm min-[400px]:text-base leading-tight">
+                  {!variant
+                    ? "Оберіть варіант"
+                    : !inStock
+                    ? "Повідомити, коли з'явиться"
+                    : "Додати до кошика"}
+                </span>
               </Button>
             </div>
           </div>

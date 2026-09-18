@@ -29,7 +29,7 @@ export default async function CategoryGrid({
         linkHref="/store"
         linkLabel="Усі категорії"
       />
-      <div className="grid grid-cols-2 small:grid-cols-4 gap-4 small:gap-5">
+      <div className="grid grid-cols-2 max-[500px]:grid-cols-1 small:grid-cols-4 gap-4 small:gap-5">
         {topLevel.map((category, index) => {
           const image = imageByCategoryId.get(category.id)
 

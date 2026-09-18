@@ -6,7 +6,7 @@ import {
   fetchPostomatLimits,
   type PostomatLimits,
 } from "@lib/util/postomat-capacity"
-import { CheckCircleSolid } from "@medusajs/icons"
+import { CheckCircleSolid, PencilSquareSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import { CarrierLogo } from "@modules/checkout/components/carrier-logos"
@@ -276,11 +276,11 @@ const Shipping: React.FC<ShippingProps> = ({
 
   return (
     <div className="bg-ivory">
-      <div className="flex flex-row items-center justify-between mb-6">
+      <div className="flex flex-row items-center justify-between mb-6 gap-x-4">
         <Heading
           level="h2"
           className={clx(
-            "flex flex-row text-3xl-regular gap-x-2 items-baseline",
+            "flex flex-row text-3xl-regular gap-x-2 items-center",
             {
               "opacity-50 pointer-events-none select-none":
                 !isOpen && cart.shipping_methods?.length === 0,
@@ -289,7 +289,7 @@ const Shipping: React.FC<ShippingProps> = ({
         >
           Доставка
           {!isOpen && (cart.shipping_methods?.length ?? 0) > 0 && (
-            <CheckCircleSolid />
+            <CheckCircleSolid className="flex-shrink-0" />
           )}
         </Heading>
         {!isOpen &&
@@ -299,10 +299,11 @@ const Shipping: React.FC<ShippingProps> = ({
             <Text>
               <button
                 onClick={handleEdit}
-                className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover"
+                className="text-ui-fg-interactive hover:text-ui-fg-interactive-hover flex items-center justify-center p-2 sm:p-0"
                 data-testid="edit-delivery-button"
               >
-                Edit
+                <span className="hidden sm:inline">Редагувати</span>
+                <PencilSquareSolid className="sm:hidden w-5 h-5" />
               </button>
             </Text>
           )}
@@ -557,9 +558,9 @@ const Shipping: React.FC<ShippingProps> = ({
         </>
       ) : (
         <div>
-          <div className="text-small-regular flex flex-col gap-y-4 small:flex-row small:gap-x-6">
+          <div className="text-small-regular flex flex-col md:flex-row gap-y-6 md:gap-y-0 gap-x-4 md:gap-x-8 w-full">
             {cart && (cart.shipping_methods?.length ?? 0) > 0 && (
-              <div className="flex flex-col w-1/3">
+              <div className="flex flex-col w-full md:w-1/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
                   Метод
                 </Text>
@@ -577,7 +578,7 @@ const Shipping: React.FC<ShippingProps> = ({
               }
 
               return (
-                <div className="flex flex-col w-2/3">
+                <div className="flex flex-col w-full md:w-2/3">
                   <Text className="txt-medium-plus text-ui-fg-base mb-1">
                     Адреса доставки
                   </Text>

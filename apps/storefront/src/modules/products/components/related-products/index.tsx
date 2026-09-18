@@ -1,5 +1,6 @@
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { isProductInStock } from "@lib/util/product"
 import { HttpTypes } from "@medusajs/types"
 import Product from "../product-preview"
 import { PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
@@ -47,6 +48,15 @@ export default async function RelatedProducts({
     return null
   }
 
+  const sortedProducts = [...products].sort((a, b) => {
+    const aInStock = isProductInStock(a)
+    const bInStock = isProductInStock(b)
+    if (aInStock === bInStock) {
+      return 0
+    }
+    return aInStock ? -1 : 1
+  })
+
   return (
     <div className="content-container">
       <div className="flex flex-col items-center text-center mb-16">
@@ -59,7 +69,7 @@ export default async function RelatedProducts({
       </div>
 
       <ul className="grid grid-cols-1 min-[430px]:grid-cols-2 small:grid-cols-3 medium:grid-cols-4 gap-x-6 gap-y-8">
-        {products.map((product) => (
+        {sortedProducts.map((product) => (
           <li key={product.id}>
             <Product region={region} product={product} />
           </li>

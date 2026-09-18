@@ -44,6 +44,7 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
                         key={item.id}
                         item={item}
                         currencyCode={cart?.currency_code}
+                        isLine={true}
                       />
                     )
                   })

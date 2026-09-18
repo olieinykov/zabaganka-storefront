@@ -1,8 +1,11 @@
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { isProductInStock } from "@lib/util/product"
 import ProductPreview from "@modules/products/components/product-preview"
 import SectionHeading from "@modules/home/components/section-heading"
 import { PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
+
+const STOCK_FILTER_POOL_MULTIPLIER = 4
 
 export default async function ProductSection({
   eyebrow,
@@ -30,15 +33,27 @@ export default async function ProductSection({
   }
 
   const {
-    response: { products },
+    response: { products: pool },
   } = await listProducts({
     countryCode,
     queryParams: {
-      limit,
+      limit: limit * STOCK_FILTER_POOL_MULTIPLIER,
       fields: PRODUCT_PREVIEW_FIELDS,
       ...(sortBy ? { order: sortBy } : {}),
     },
   })
+
+  if (!pool.length) {
+    return null
+  }
+
+  const inStockProducts = pool.filter((p) => isProductInStock(p))
+  const outOfStockProducts = pool.filter((p) => !isProductInStock(p))
+
+  const products = [...inStockProducts, ...outOfStockProducts].slice(
+    0,
+    limit
+  )
 
   if (!products.length) {
     return null

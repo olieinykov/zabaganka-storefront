@@ -13,12 +13,12 @@ export default function SectionHeading({
   linkLabel?: string
 }) {
   return (
-    <div className="flex items-end justify-between mb-8 gap-4">
+    <div className="flex items-end justify-between mb-8 gap-4 max-[425px]:flex-col max-[425px]:items-start">
       <div>
         <span className="text-xs uppercase tracking-[0.2em] text-gold font-semibold">
           {eyebrow}
         </span>
-        <h2 className="font-display text-3xl small:text-4xl text-navy mt-1">
+        <h2 className="font-display text-3xl small:text-4xl text-navy mt-1 max-[320px]:leading-tight">
           {title}
         </h2>
       </div>
@@ -27,7 +27,7 @@ export default function SectionHeading({
           href={linkHref}
           className="shrink-0 inline-flex items-center gap-1.5 text-sm text-navy hover:text-gold interactive underline decoration-line underline-offset-4"
         >
-          {linkLabel}
+          <span>{linkLabel}</span>
           <ArrowRight size={14} />
         </LocalizedClientLink>
       )}
