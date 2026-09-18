@@ -102,7 +102,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             </div>
             <div
               className={clx(
-                "grid grid-cols-1 min-[400px]:grid-cols-2 w-full gap-2 min-[400px]:gap-x-4",
+                "grid grid-cols-1 min-[540px]:grid-cols-2 w-full gap-2 min-[400px]:gap-x-4",
                 {
                   "!grid-cols-1": isSimple,
                 }
