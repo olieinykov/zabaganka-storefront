@@ -3,12 +3,13 @@ import { createTransferRequest } from "@lib/data/orders"
 import { CheckCircleMiniSolid, XCircleSolid } from "@medusajs/icons"
 import { Heading, IconButton, Input, Text } from "@modules/common/components/ui"
 import { useActionState } from "react"
-// TODO: Re-add Toaster component when needed
+import { useToast } from "@modules/common/components/toast"
 import { SubmitButton } from "@modules/checkout/components/submit-button"
 import { useEffect, useState } from "react"
 
 export default function TransferRequestForm() {
   const [showSuccess, setShowSuccess] = useState(false)
+  const { showToast } = useToast()
 
   const [state, formAction] = useActionState(createTransferRequest, {
     success: false,
@@ -19,8 +20,20 @@ export default function TransferRequestForm() {
   useEffect(() => {
     if (state.success && state.order) {
       setShowSuccess(true)
+      showToast("Запит на перенесення надіслано", {
+        description: `Лист надіслано на ${state.order.email}`,
+      })
     }
-  }, [state.success, state.order])
+  }, [state.success, state.order, showToast])
+
+  useEffect(() => {
+    if (!state.success && state.error) {
+      showToast("Не вдалося надіслати запит", {
+        description: state.error,
+        variant: "error",
+      })
+    }
+  }, [state.success, state.error, showToast])
 
   return (
     <div className="flex flex-col gap-y-4 w-full">

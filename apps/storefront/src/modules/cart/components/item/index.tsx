@@ -41,9 +41,49 @@ const Item = ({ item, type = "full", currencyCode, isLine = false }: ItemProps) 
       })
   }
 
-  // TODO: Update this to grab the actual max inventory
-  const maxQtyFromInventory = 10
-  const maxQuantity = item.variant?.manage_inventory ? 10 : maxQtyFromInventory
+  // How many units the store actually has on hand for this variant, used
+  // to cap the quantity dropdown so a customer can't select more than
+  // what's in stock. When inventory isn't tracked for this variant, or
+  // backorders are allowed, there's no real stock ceiling to enforce, so
+  // we fall back to a flat UI cap instead (so the dropdown doesn't turn
+  // into an unbounded list for high-stock/untracked items).
+  const QUANTITY_DROPDOWN_CEILING = 10
+
+  // 1. Считаем сумму доступного остатка по всем локациям инвентаря
+  const inventoryItems = (item.variant as any)?.inventory_items
+  const inventoryQuantity = Array.isArray(inventoryItems)
+    ? inventoryItems.reduce((acc: number, link: any) => {
+        const levels = link.inventory?.location_levels ?? []
+        const sumLevels = levels.reduce(
+          (sum: number, lvl: any) =>
+            sum + (lvl.available_quantity ?? lvl.stocked_quantity ?? 0),
+          0
+        )
+        return acc + sumLevels
+      }, 0)
+    : undefined
+console.log("Inventory items debug:", {
+  inventory_items: (item.variant as any)?.inventory_items,
+  calculatedQuantity: inventoryQuantity,
+})
+  // 2. Определяем лимит для выбора
+  const trackedStock =
+    item.variant?.manage_inventory && !item.variant?.allow_backorder && inventoryQuantity !== undefined
+      ? inventoryQuantity
+      : undefined
+
+  const maxQuantity =
+    trackedStock !== undefined
+      ? Math.max(1, Math.min(trackedStock, QUANTITY_DROPDOWN_CEILING))
+      : QUANTITY_DROPDOWN_CEILING
+
+  const quantityOptions = Array.from(
+    { length: maxQuantity },
+    (_, i) => i + 1
+  )
+  if (item.quantity > maxQuantity) {
+    quantityOptions.push(item.quantity)
+  }
 
   return (
     <Table.Row 
@@ -100,20 +140,11 @@ const Item = ({ item, type = "full", currencyCode, isLine = false }: ItemProps) 
               className="w-14 h-10 p-4"
               data-testid="product-select-button"
             >
-              {Array.from(
-                {
-                  length: Math.min(maxQuantity, 10),
-                },
-                (_, i) => (
-                  <option value={i + 1} key={i}>
-                    {i + 1}
-                  </option>
-                )
-              )}
-
-              <option value={1} key={1}>
-                1
-              </option>
+              {quantityOptions.map((qty) => (
+                <option value={qty} key={qty}>
+                  {qty}
+                </option>
+              ))}
             </CartItemSelect>
             {updating && <Spinner />}
           </div>

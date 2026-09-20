@@ -4,7 +4,7 @@ import React from "react"
 import Input from "@modules/common/components/input"
 import AccountInfo from "../account-info"
 import { HttpTypes } from "@medusajs/types"
-// TODO: Re-add toast notifications when Toaster component is implemented
+import { useToast } from "@modules/common/components/toast"
 
 type MyInformationProps = {
   customer: HttpTypes.StoreCustomer
@@ -12,11 +12,14 @@ type MyInformationProps = {
 
 const ProfilePassword: React.FC<MyInformationProps> = ({ customer: _customer }) => {
   const [successState, setSuccessState] = React.useState(false)
+  const { showToast } = useToast()
 
   // TODO: Add support for password updates
   const updatePassword = async () => {
-    // TODO: Re-add toast notification when Toaster component is implemented
-    console.info("Password update is not implemented")
+    showToast("Зміна пароля поки недоступна", {
+      description: "Ця функція ще не реалізована. Спробуйте пізніше.",
+      variant: "info",
+    })
   }
 
   const clearState = () => {
