@@ -5,14 +5,22 @@ import compareAddresses from "@lib/util/compare-addresses"
 import { CheckCircleSolid, PencilSquareSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import Divider from "@modules/common/components/divider"
-import { Heading, Text } from "@modules/common/components/ui"
+import { Button, Heading, Text } from "@modules/common/components/ui"
 import Spinner from "@modules/common/icons/spinner"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useActionState } from "react"
+import { useActionState, useEffect, useRef, useState } from "react"
 import BillingAddress from "../billing_address"
 import ErrorMessage from "../error-message"
 import ShippingAddress from "../shipping-address"
 import { SubmitButton } from "../submit-button"
+
+function snapshotForm(form: HTMLFormElement): string {
+  const pairs: string[] = []
+  for (const [key, value] of new FormData(form).entries()) {
+    pairs.push(`${key}=${typeof value === "string" ? value : "[file]"}`)
+  }
+  return pairs.sort().join("&")
+}
 
 const Addresses = ({
   cart,
@@ -26,6 +34,8 @@ const Addresses = ({
   const pathname = usePathname()
 
   const isOpen = searchParams.get("step") === "address"
+  const returnTo = searchParams.get("return_to")
+  const isEditMode = !!returnTo
 
   const { state: sameAsBilling, toggle: toggleSameAsBilling } = useToggleState(
     cart?.shipping_address && cart?.billing_address
@@ -34,10 +44,42 @@ const Addresses = ({
   )
 
   const handleEdit = () => {
-    router.push(pathname + "?step=address")
+    const currentStep = searchParams.get("step") || "review"
+    router.push(
+      pathname + `?step=address&return_to=${currentStep}`,
+      { scroll: false }
+    )
+  }
+
+  const handleDiscardChanges = () => {
+    if (formRef.current) {
+      formRef.current.reset()
+    }
+    if (!returnTo) {
+      return
+    }
+    router.push(pathname + `?step=${returnTo}`, { scroll: false })
   }
 
   const [message, formAction] = useActionState(setAddresses, null)
+
+  const formRef = useRef<HTMLFormElement>(null)
+  const initialSnapshotRef = useRef<string | null>(null)
+  const [isDirty, setIsDirty] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && formRef.current) {
+      initialSnapshotRef.current = snapshotForm(formRef.current)
+      setIsDirty(false)
+    }
+  }, [isOpen])
+
+  const handleFormChange = () => {
+    if (!formRef.current || initialSnapshotRef.current === null) {
+      return
+    }
+    setIsDirty(snapshotForm(formRef.current) !== initialSnapshotRef.current)
+  }
 
   return (
     <div className="bg-ivory">
@@ -63,7 +105,8 @@ const Addresses = ({
         )}
       </div>
       {isOpen ? (
-        <form action={formAction}>
+        <form ref={formRef} action={formAction} onChange={handleFormChange}>
+          <input type="hidden" name="return_to" value={returnTo || ""} />
           <div className="pb-8">
             <ShippingAddress
               customer={customer}
@@ -84,9 +127,31 @@ const Addresses = ({
                 <BillingAddress cart={cart} />
               </div>
             )}
-            <SubmitButton className="mt-6" data-testid="submit-address-button">
-              Перейти до доставки
-            </SubmitButton>
+            {isEditMode ? (
+              <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleDiscardChanges}
+                  data-testid="discard-address-changes-button"
+                >
+                  Нічого не змінювати
+                </Button>
+                <SubmitButton
+                  disabled={!isDirty}
+                  data-testid="submit-address-button"
+                >
+                  Зберегти зміни
+                </SubmitButton>
+              </div>
+            ) : (
+              <SubmitButton
+                className="mt-6"
+                data-testid="submit-address-button"
+              >
+                Перейти до доставки
+              </SubmitButton>
+            )}
             <ErrorMessage error={message} data-testid="address-error-message" />
           </div>
         </form>

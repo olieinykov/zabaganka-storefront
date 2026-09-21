@@ -1,7 +1,11 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { MedusaError } from "@medusajs/framework/utils"
+import { MedusaError, Modules } from "@medusajs/framework/utils"
+import type { ICacheService } from "@medusajs/framework/types"
 import { NovaPoshtaClient } from "../../../../../modules/nova-poshta-fulfillment/client"
 import { NP_POSTOMAT_TYPE_REF } from "../../../../../modules/nova-poshta-fulfillment/types"
+
+
+const CACHE_TTL_SECONDS = 600
 
 /**
  * GET /store/delivery/nova-poshta/warehouses?cityRef=...&q=...&type=warehouse|postomat
@@ -22,6 +26,15 @@ export async function GET(
     throw new MedusaError(MedusaError.Types.INVALID_DATA, "cityRef is required")
   }
 
+  const cache = req.scope.resolve<ICacheService>(Modules.CACHE)
+  const cacheKey = `np:warehouses:${cityRef}:${type}:${(query || "").toLowerCase()}`
+
+  const cached = await cache.get<{ warehouses: unknown[] }>(cacheKey)
+  if (cached) {
+    res.json(cached)
+    return
+  }
+
   const client = new NovaPoshtaClient({
     apiKey: process.env.NOVA_POSHTA_API_KEY as string,
   })
@@ -32,7 +45,7 @@ export async function GET(
     typeOfWarehouseRef: type === "postomat" ? NP_POSTOMAT_TYPE_REF : undefined,
   })
 
-  res.json({
+  const payload = {
     warehouses: warehouses.map((wh) => ({
       ref: wh.Ref,
       name: wh.Description,
@@ -40,5 +53,9 @@ export async function GET(
       shortAddress: wh.ShortAddress,
       cityRef: wh.CityRef,
     })),
-  })
+  }
+
+  await cache.set(cacheKey, payload, CACHE_TTL_SECONDS)
+
+  res.json(payload)
 }

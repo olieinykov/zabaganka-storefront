@@ -19,8 +19,8 @@ import { getLocale } from "./locale-actions"
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
   fields ??=
-  "*items, *region, *items.product, *items.variant, +items.variant.manage_inventory, +items.variant.allow_backorder, *items.variant.inventory_items.inventory.location_levels, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name"
-  
+    "*items, *region, *items.product, *items.variant, +items.variant.manage_inventory, +items.variant.allow_backorder, *items.variant.inventory_items.inventory.location_levels, *items.thumbnail, *items.metadata, +items.total, *promotions, +shipping_methods.name, +shipping_methods.data"
+
   if (!id) {
     return null
   }
@@ -29,19 +29,6 @@ export async function retrieveCart(cartId?: string, fields?: string) {
     ...(await getAuthHeaders()),
   }
 
-  // Bug this fixes: when an admin deletes a product/variant, the backend
-  // cleans up carts that reference it right away (see the
-  // `cart-cleanup-on-product-removed` subscriber) — but that happens in a
-  // different process than the storefront, which has no way to tell this
-  // Next.js server to drop its cached copy of the cart (the cache tag for
-  // carts is scoped per browser session via the `_medusa_cache_id` cookie,
-  // so the backend can't reconstruct it from just a cart id). With
-  // `cache: "force-cache"` here, the storefront kept serving the old
-  // cached snapshot — still showing the deleted item — until something on
-  // the storefront side happened to bust that tag itself, which is why
-  // only a hard refresh (bypassing the cache entirely) showed the correct
-  // cart. Cart contents are inherently per-user, fast-changing data, so we
-  // just always fetch them fresh instead of caching them.
   return await sdk.client
     .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
       method: "GET",
@@ -471,7 +458,13 @@ export async function setAddresses(currentState: unknown, formData: FormData) {
     return e.message
   }
 
-  redirect(`/checkout?step=delivery`)
+  const returnTo = formData.get("return_to")
+  const allowedSteps = ["delivery", "payment", "review"]
+  const targetStep =
+    typeof returnTo === "string" && allowedSteps.includes(returnTo)
+      ? returnTo
+      : "delivery"
+  redirect(`/checkout?step=${targetStep}`)
 }
 
 export async function placeOrder(cartId?: string) {

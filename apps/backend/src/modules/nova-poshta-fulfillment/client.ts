@@ -7,6 +7,7 @@ import {
 } from "./types"
 
 const NP_API_URL = "https://api.novaposhta.ua/v2.0/json/"
+const REQUEST_TIMEOUT_MS = 8000
 
 
 export class NovaPoshtaClient {
@@ -27,16 +28,34 @@ export class NovaPoshtaClient {
     calledMethod: string,
     methodProperties: Record<string, unknown> = {}
   ): Promise<T[]> {
-    const response = await fetch(NP_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        apiKey: this.apiKey,
-        modelName,
-        calledMethod,
-        methodProperties,
-      }),
-    })
+    let response: Response
+    try {
+      response = await fetch(NP_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey: this.apiKey,
+          modelName,
+          calledMethod,
+          methodProperties,
+        }),
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      })
+    } catch (error) {
+      const err = error as Error
+      if (err.name === "TimeoutError" || err.name === "AbortError") {
+        throw new MedusaError(
+          MedusaError.Types.UNEXPECTED_STATE,
+          `Nova Poshta API request timed out after ${REQUEST_TIMEOUT_MS}ms (${modelName}.${calledMethod})`
+        )
+      }
+      throw new MedusaError(
+        MedusaError.Types.UNEXPECTED_STATE,
+        `Nova Poshta API request failed (${modelName}.${calledMethod}): ${
+          err.message || String(err)
+        }`
+      )
+    }
 
     if (!response.ok) {
       throw new MedusaError(

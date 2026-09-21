@@ -1,5 +1,10 @@
 import type { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
+import { Modules } from "@medusajs/framework/utils"
+import type { ICacheService } from "@medusajs/framework/types"
 import { NovaPoshtaClient } from "../../../../../modules/nova-poshta-fulfillment/client"
+
+
+const CACHE_TTL_SECONDS = 1800
 
 /**
  * GET /store/delivery/nova-poshta/cities?q=київ
@@ -18,17 +23,30 @@ export async function GET(
     return
   }
 
+  const cache = req.scope.resolve<ICacheService>(Modules.CACHE)
+  const cacheKey = `np:cities:${query.toLowerCase()}`
+
+  const cached = await cache.get<{ cities: unknown[] }>(cacheKey)
+  if (cached) {
+    res.json(cached)
+    return
+  }
+
   const client = new NovaPoshtaClient({
     apiKey: process.env.NOVA_POSHTA_API_KEY as string,
   })
 
   const cities = await client.getCities(query)
 
-  res.json({
+  const payload = {
     cities: cities.map((city) => ({
       ref: city.Ref,
       name: city.Description,
       area: city.AreaDescription,
     })),
-  })
+  }
+
+  await cache.set(cacheKey, payload, CACHE_TTL_SECONDS)
+
+  res.json(payload)
 }

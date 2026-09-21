@@ -64,6 +64,15 @@ function formatAddress(address: HttpTypes.StoreCartAddress) {
 /** Renders the Nova Poshta / Ukrposhta destination (or courier comment)
  *  saved on a shipping method's `data`, for display in the collapsed
  *  "Доставка" summary once this step is completed. */
+const COURIER_COMMENT_DISPLAY_LIMIT = 60
+
+function truncateComment(comment: string, limit = COURIER_COMMENT_DISPLAY_LIMIT) {
+  if (comment.length <= limit) {
+    return comment
+  }
+  return `${comment.slice(0, limit).trimEnd()}…`
+}
+
 function formatDeliveryDestination(
   data:
     | {
@@ -80,7 +89,12 @@ function formatDeliveryDestination(
 
   if (data.type === "courier") {
     const cityPart = data.city_name ? `Кур'єром у м. ${data.city_name}` : null
-    const commentPart = data.comment ? `Коментар для кур'єра: ${data.comment}` : null
+    // Truncated so a long comment doesn't blow up the collapsed summary —
+    // the full text is still there in the edit view, this is just the
+    // compact "next to the method name" preview.
+    const commentPart = data.comment
+      ? `Коментар: ${truncateComment(data.comment)}`
+      : null
     return [cityPart, commentPart].filter(Boolean).join(". ") || null
   }
 
@@ -92,6 +106,28 @@ function formatDeliveryDestination(
   return data.city_name || null
 }
 
+
+function isSameAsSavedMethod(
+  cart: HttpTypes.StoreCart,
+  shippingMethodId: string,
+  data: Record<string, unknown> | undefined
+): boolean {
+  const savedMethod = cart.shipping_methods?.at(-1)
+  if (savedMethod?.shipping_option_id !== shippingMethodId) {
+    return false
+  }
+
+  if (!data) {
+    return true
+  }
+
+  const saved = (savedMethod?.data ?? {}) as Record<string, unknown>
+  return (
+    (data.city_ref ?? undefined) === (saved.city_ref ?? undefined) &&
+    (data.warehouse_ref ?? undefined) === (saved.warehouse_ref ?? undefined) &&
+    (data.comment ?? undefined) === (saved.comment ?? undefined)
+  )
+}
 
 const Shipping: React.FC<ShippingProps> = ({
   cart,
@@ -105,6 +141,12 @@ const Shipping: React.FC<ShippingProps> = ({
   const [shippingMethodId, setShippingMethodId] = useState<string | null>(
     cart.shipping_methods?.at(-1)?.shipping_option_id || null
   )
+
+  const [pendingSave, setPendingSave] = useState<{
+    shippingMethodId: string
+    variant: "shipping" | "pickup"
+    data?: Record<string, unknown>
+  } | null>(null)
 
   // "Поштомат" needs to be greyed out up front if the order's estimated
   // package doesn't fit a standard cell — see
@@ -121,20 +163,8 @@ const Shipping: React.FC<ShippingProps> = ({
     ? estimatesExceedPostomat(cart.items, postomatLimits)
     : false
 
-  // When the customer selects a Nova Poshta / Ukrposhta shipping option that
-  // requires a destination (warehouse, postomat, or a courier comment), we
-  // hold off calling the shipping-method API until a valid destination has
-  // been chosen in <DeliveryDestination />.
   const [destinationOption, setDestinationOption] =
     useState<HttpTypes.StoreCartShippingOption | null>(null)
-  // Tracks whether the currently selected Nova Poshta / Ukrposhta
-  // destination is a *complete, committed* selection. `<DeliveryDestination
-  // />` calls `onChange(null)` any time the city/warehouse fields stop
-  // forming a valid selection (e.g. the customer edits the city text after
-  // already picking a warehouse) — this flag is what actually blocks moving
-  // on to the next step in that case, since `cart.shipping_methods` on its
-  // own still reflects the *last successfully saved* method and wouldn't
-  // otherwise change just because the on-screen fields became invalid.
   const [isDestinationConfirmed, setIsDestinationConfirmed] = useState(true)
   const lastShippingMethodData = cart.shipping_methods?.at(-1)?.data as
     | (CarrierOptionData & {
@@ -151,6 +181,8 @@ const Shipping: React.FC<ShippingProps> = ({
   const pathname = usePathname()
 
   const isOpen = searchParams.get("step") === "delivery"
+  const returnTo = searchParams.get("return_to")
+  const isEditMode = !!returnTo
 
   const _shippingMethods = availableShippingMethods?.filter(
     (sm) => (sm as unknown as { service_zone?: { fulfillment_set?: { type?: string; location?: { address: HttpTypes.StoreCartAddress } } } }).service_zone?.fulfillment_set?.type !== "pickup"
@@ -193,7 +225,11 @@ const Shipping: React.FC<ShippingProps> = ({
   }, [shippingMethodsKey])
 
   const handleEdit = () => {
-    router.push(pathname + "?step=delivery", { scroll: false })
+    const currentStep = searchParams.get("step") || "review"
+    router.push(
+      pathname + `?step=delivery&return_to=${currentStep}`,
+      { scroll: false }
+    )
   }
 
   const handleSubmit = () => {
@@ -211,6 +247,16 @@ const Shipping: React.FC<ShippingProps> = ({
       setShowPickupOptions(PICKUP_OPTION_ON)
     } else {
       setShowPickupOptions(PICKUP_OPTION_OFF)
+    }
+
+    if (isEditMode) {
+      setShippingMethodId(id)
+      setPendingSave(
+        isSameAsSavedMethod(cart, id, data)
+          ? null
+          : { shippingMethodId: id, variant, data }
+      )
+      return
     }
 
     let currentId: string | null = null
@@ -231,23 +277,37 @@ const Shipping: React.FC<ShippingProps> = ({
       })
   }
 
-  /**
-   * Called by <DeliveryDestination /> once the customer has picked a valid
-   * destination (city + warehouse/postomat, or a courier comment). Submits
-   * the shipping method with that data (validated by the fulfillment
-   * provider's `validateFulfillmentData`), and mirrors it onto the cart's
-   * `metadata.delivery` so it's easy to read from the cart/order directly.
-   */
   const handleDestinationChange = async (value: DeliveryDestinationValue | null) => {
     if (!destinationOption) {
       return
     }
 
     if (!value) {
-      // The selection is currently incomplete (or was edited after being
-      // valid) — don't call the API, and make sure the customer can't
-      // proceed until it's valid again.
       setIsDestinationConfirmed(false)
+      if (isEditMode) {
+        setPendingSave((prev) =>
+          prev?.shippingMethodId === destinationOption.id ? null : prev
+        )
+      }
+      return
+    }
+
+    if (isEditMode) {
+      setError(null)
+      setIsDestinationConfirmed(true)
+      setPendingSave(
+        isSameAsSavedMethod(
+          cart,
+          destinationOption.id,
+          value as unknown as Record<string, unknown>
+        )
+          ? null
+          : {
+              shippingMethodId: destinationOption.id,
+              variant: "shipping",
+              data: value,
+            }
+      )
       return
     }
 
@@ -255,12 +315,14 @@ const Shipping: React.FC<ShippingProps> = ({
     setIsLoading(true)
 
     try {
-      await setShippingMethod({
-        cartId: cart.id,
-        shippingMethodId: destinationOption.id,
-        data: value,
-      })
-      await setCartDeliveryMetadata(cart.id, value)
+      await Promise.all([
+        setShippingMethod({
+          cartId: cart.id,
+          shippingMethodId: destinationOption.id,
+          data: value,
+        }),
+        setCartDeliveryMetadata(cart.id, value),
+      ])
       setIsDestinationConfirmed(true)
     } catch (err) {
       setIsDestinationConfirmed(false)
@@ -268,6 +330,68 @@ const Shipping: React.FC<ShippingProps> = ({
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleSaveChanges = async () => {
+    if (!pendingSave || !returnTo) {
+      return
+    }
+
+    setError(null)
+    setIsLoading(true)
+
+    try {
+      await Promise.all([
+        setShippingMethod({
+          cartId: cart.id,
+          shippingMethodId: pendingSave.shippingMethodId,
+          data: pendingSave.data,
+        }),
+        pendingSave.data
+          ? setCartDeliveryMetadata(cart.id, pendingSave.data)
+          : Promise.resolve(),
+      ])
+      setPendingSave(null)
+      router.push(pathname + `?step=${returnTo}`, { scroll: false })
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDiscardChanges = () => {
+    if (!returnTo) {
+      return
+    }
+
+    const savedId = cart.shipping_methods?.at(-1)?.shipping_option_id ?? null
+    const savedOption = _shippingMethods?.find((m) => m.id === savedId)
+    const savedOptionData = savedOption?.data as CarrierOptionData | undefined
+
+    setError(null)
+    setPendingSave(null)
+    setShippingMethodId(savedId)
+
+    if (
+      savedOption &&
+      (savedOptionData?.carrier === "nova-poshta" ||
+        savedOptionData?.carrier === "ukrposhta") &&
+      savedOptionData?.type
+    ) {
+      setDestinationOption(savedOption)
+    } else {
+      setDestinationOption(null)
+    }
+    setIsDestinationConfirmed(true)
+
+    setShowPickupOptions(
+      _pickupMethods?.find((m) => m.id === savedId)
+        ? PICKUP_OPTION_ON
+        : PICKUP_OPTION_OFF
+    )
+
+    router.push(pathname + `?step=${returnTo}`, { scroll: false })
   }
 
   useEffect(() => {
@@ -379,14 +503,21 @@ const Shipping: React.FC<ShippingProps> = ({
                       setError(null)
                       setShippingMethodId(v)
                       setDestinationOption(option)
-                      // Only the previously *saved* method for this exact
-                      // option counts as confirmed; a freshly picked radio
-                      // starts out unconfirmed until <DeliveryDestination />
-                      // reports a complete selection.
-                      setIsDestinationConfirmed(
-                        cart.shipping_methods?.at(-1)?.shipping_option_id ===
-                          option.id
-                      )
+                      // Always start unconfirmed on an interactive change —
+                      // even when switching back to the option that's
+                      // currently saved on the cart. Previously this compared
+                      // against the saved cart to decide, which meant
+                      // switching away to a different Nova Poshta option and
+                      // back (without ever filling that other option in)
+                      // could re-enable "Продовжити" instantly, before
+                      // <DeliveryDestination /> below had actually
+                      // remounted and re-confirmed anything for this render.
+                      // <DeliveryDestination />'s own onChange (fired right
+                      // after it mounts, pre-filled from the saved data —
+                      // see `initialValue` below) is what flips this back to
+                      // `true`, so the button only unlocks once that real
+                      // round trip has happened.
+                      setIsDestinationConfirmed(false)
                       return
                     }
 
@@ -454,15 +585,22 @@ const Shipping: React.FC<ShippingProps> = ({
                       cart.shipping_methods?.at(-1)?.shipping_option_id ===
                       destinationOption.id
 
+                    const initialValue =
+                      pendingSave?.shippingMethodId === destinationOption.id
+                        ? (pendingSave.data as
+                            | Partial<DeliveryDestinationValue>
+                            | undefined)
+                        : hasCommittedMethod
+                        ? lastShippingMethodData
+                        : undefined
+
                     return (
                       <DeliveryDestination
                         key={destinationOption.id}
                         carrier={optionData.carrier!}
                         type={optionData.type!}
                         onChange={handleDestinationChange}
-                        initialValue={
-                          hasCommittedMethod ? lastShippingMethodData : undefined
-                        }
+                        initialValue={initialValue}
                       />
                     )
                   })()}
@@ -537,23 +675,54 @@ const Shipping: React.FC<ShippingProps> = ({
               error={error}
               data-testid="delivery-option-error-message"
             />
-            <Button
-              size="large"
-              className="mt"
-              onClick={handleSubmit}
-              isLoading={isLoading}
-              disabled={
-                !cart.shipping_methods?.[0] ||
-                cart.shipping_methods.at(-1)?.shipping_option_id !==
-                  shippingMethodId ||
-                (!!destinationOption &&
-                  shippingMethodId === destinationOption.id &&
-                  !isDestinationConfirmed)
-              }
-              data-testid="submit-delivery-option-button"
-            >
-              Перейти до оплати
-            </Button>
+            {isEditMode ? (
+              <div className="flex flex-col sm:flex-row gap-3 mt">
+                <Button
+                  size="large"
+                  variant="secondary"
+                  type="button"
+                  onClick={handleDiscardChanges}
+                  disabled={isLoading}
+                  data-testid="discard-delivery-changes-button"
+                >
+                  Нічого не змінювати
+                </Button>
+                <Button
+                  size="large"
+                  type="button"
+                  onClick={handleSaveChanges}
+                  isLoading={isLoading}
+                  disabled={
+                    isLoading ||
+                    !pendingSave ||
+                    (!!destinationOption &&
+                      shippingMethodId === destinationOption.id &&
+                      !isDestinationConfirmed)
+                  }
+                  data-testid="save-delivery-changes-button"
+                >
+                  Зберегти зміни
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="large"
+                className="mt"
+                onClick={handleSubmit}
+                isLoading={isLoading}
+                disabled={
+                  !cart.shipping_methods?.[0] ||
+                  cart.shipping_methods.at(-1)?.shipping_option_id !==
+                    shippingMethodId ||
+                  (!!destinationOption &&
+                    shippingMethodId === destinationOption.id &&
+                    !isDestinationConfirmed)
+                }
+                data-testid="submit-delivery-option-button"
+              >
+                Перейти до оплати
+              </Button>
+            )}
           </div>
         </>
       ) : (

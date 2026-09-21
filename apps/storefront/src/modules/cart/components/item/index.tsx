@@ -41,37 +41,37 @@ const Item = ({ item, type = "full", currencyCode, isLine = false }: ItemProps) 
       })
   }
 
-  // How many units the store actually has on hand for this variant, used
-  // to cap the quantity dropdown so a customer can't select more than
-  // what's in stock. When inventory isn't tracked for this variant, or
-  // backorders are allowed, there's no real stock ceiling to enforce, so
-  // we fall back to a flat UI cap instead (so the dropdown doesn't turn
-  // into an unbounded list for high-stock/untracked items).
-  const QUANTITY_DROPDOWN_CEILING = 10
-
-  // 1. Считаем сумму доступного остатка по всем локациям инвентаря
-  const inventoryItems = (item.variant as any)?.inventory_items
+ const QUANTITY_DROPDOWN_CEILING = 10
+  const inventoryItems = (
+    item.variant as unknown as {
+      inventory_items?: Array<{
+        inventory?: {
+          location_levels?: Array<{
+            available_quantity?: number | null
+            stocked_quantity?: number | null
+          }>
+        }
+      }>
+    }
+  )?.inventory_items
   const inventoryQuantity = Array.isArray(inventoryItems)
-    ? inventoryItems.reduce((acc: number, link: any) => {
+    ? inventoryItems.reduce((total, link) => {
         const levels = link.inventory?.location_levels ?? []
-        const sumLevels = levels.reduce(
-          (sum: number, lvl: any) =>
-            sum + (lvl.available_quantity ?? lvl.stocked_quantity ?? 0),
+        const levelsTotal = levels.reduce(
+          (sum, level) =>
+            sum + (level.available_quantity ?? level.stocked_quantity ?? 0),
           0
         )
-        return acc + sumLevels
+        return total + levelsTotal
       }, 0)
     : undefined
-console.log("Inventory items debug:", {
-  inventory_items: (item.variant as any)?.inventory_items,
-  calculatedQuantity: inventoryQuantity,
-})
-  // 2. Определяем лимит для выбора
+
   const trackedStock =
-    item.variant?.manage_inventory && !item.variant?.allow_backorder && inventoryQuantity !== undefined
+    item.variant?.manage_inventory &&
+    !item.variant?.allow_backorder &&
+    inventoryQuantity !== undefined
       ? inventoryQuantity
       : undefined
-
   const maxQuantity =
     trackedStock !== undefined
       ? Math.max(1, Math.min(trackedStock, QUANTITY_DROPDOWN_CEILING))
@@ -136,16 +136,10 @@ console.log("Inventory items debug:", {
             <DeleteButton id={item.id} data-testid="product-delete-button" />
             <CartItemSelect
               value={item.quantity}
-              onChange={(value) => changeQuantity(parseInt(value.target.value))}
-              className="w-14 h-10 p-4"
+              onChange={(qty) => changeQuantity(qty)}
+              options={quantityOptions}
               data-testid="product-select-button"
-            >
-              {quantityOptions.map((qty) => (
-                <option value={qty} key={qty}>
-                  {qty}
-                </option>
-              ))}
-            </CartItemSelect>
+            />
             {updating && <Spinner />}
           </div>
           <ErrorMessage error={error} data-testid="product-error-message" />
