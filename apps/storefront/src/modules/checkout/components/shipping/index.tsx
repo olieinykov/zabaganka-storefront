@@ -1,11 +1,12 @@
 "use client"
 import { Radio, RadioGroup } from "@headlessui/react"
-import { setCartDeliveryMetadata, setShippingMethod } from "@lib/data/cart"
+import { setShippingMethod } from "@lib/data/cart"
 import {
   estimatesExceedPostomat,
   fetchPostomatLimits,
   type PostomatLimits,
 } from "@lib/util/postomat-capacity"
+import { formatDeliveryDestination } from "@lib/util/format-delivery-destination"
 import { CheckCircleSolid, PencilSquareSolid } from "@medusajs/icons"
 import { HttpTypes } from "@medusajs/types"
 import ErrorMessage from "@modules/checkout/components/error-message"
@@ -61,51 +62,9 @@ function formatAddress(address: HttpTypes.StoreCartAddress) {
   return ret
 }
 
-/** Renders the Nova Poshta / Ukrposhta destination (or courier comment)
- *  saved on a shipping method's `data`, for display in the collapsed
- *  "Доставка" summary once this step is completed. */
-const COURIER_COMMENT_DISPLAY_LIMIT = 60
-
-function truncateComment(comment: string, limit = COURIER_COMMENT_DISPLAY_LIMIT) {
-  if (comment.length <= limit) {
-    return comment
-  }
-  return `${comment.slice(0, limit).trimEnd()}…`
-}
-
-function formatDeliveryDestination(
-  data:
-    | {
-        type?: CarrierOptionData["type"]
-        city_name?: string
-        warehouse_name?: string
-        comment?: string
-      }
-    | undefined
-) {
-  if (!data?.type) {
-    return null
-  }
-
-  if (data.type === "courier") {
-    const cityPart = data.city_name ? `Кур'єром у м. ${data.city_name}` : null
-    // Truncated so a long comment doesn't blow up the collapsed summary —
-    // the full text is still there in the edit view, this is just the
-    // compact "next to the method name" preview.
-    const commentPart = data.comment
-      ? `Коментар: ${truncateComment(data.comment)}`
-      : null
-    return [cityPart, commentPart].filter(Boolean).join(". ") || null
-  }
-
-  // "warehouse" | "postomat"
-  if (data.city_name && data.warehouse_name) {
-    return `${data.city_name}, ${data.warehouse_name}`
-  }
-
-  return data.city_name || null
-}
-
+// formatDeliveryDestination now lives in @lib/util/format-delivery-destination
+// so the checkout delivery step and the order confirmation page render the
+// Nova Poshta / Ukrposhta destination the exact same way.
 
 function isSameAsSavedMethod(
   cart: HttpTypes.StoreCart,
@@ -315,14 +274,11 @@ const Shipping: React.FC<ShippingProps> = ({
     setIsLoading(true)
 
     try {
-      await Promise.all([
-        setShippingMethod({
-          cartId: cart.id,
-          shippingMethodId: destinationOption.id,
-          data: value,
-        }),
-        setCartDeliveryMetadata(cart.id, value),
-      ])
+      await setShippingMethod({
+        cartId: cart.id,
+        shippingMethodId: destinationOption.id,
+        data: value,
+      })
       setIsDestinationConfirmed(true)
     } catch (err) {
       setIsDestinationConfirmed(false)
@@ -341,16 +297,11 @@ const Shipping: React.FC<ShippingProps> = ({
     setIsLoading(true)
 
     try {
-      await Promise.all([
-        setShippingMethod({
-          cartId: cart.id,
-          shippingMethodId: pendingSave.shippingMethodId,
-          data: pendingSave.data,
-        }),
-        pendingSave.data
-          ? setCartDeliveryMetadata(cart.id, pendingSave.data)
-          : Promise.resolve(),
-      ])
+      await setShippingMethod({
+        cartId: cart.id,
+        shippingMethodId: pendingSave.shippingMethodId,
+        data: pendingSave.data,
+      })
       setPendingSave(null)
       router.push(pathname + `?step=${returnTo}`, { scroll: false })
     } catch (err) {

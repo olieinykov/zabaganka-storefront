@@ -1,4 +1,4 @@
-import { convertToLocale } from "@lib/util/money"
+import { formatDeliveryDestination } from "@lib/util/format-delivery-destination"
 import { HttpTypes } from "@medusajs/types"
 import { Heading, Text } from "@modules/common/components/ui"
 
@@ -9,28 +9,35 @@ type ShippingDetailsProps = {
 }
 
 const ShippingDetails = ({ order }: ShippingDetailsProps) => {
+  const shippingMethod = order.shipping_methods?.[0] as
+    | { name?: string; data?: Record<string, unknown> }
+    | undefined
+  const destinationText = formatDeliveryDestination(
+    shippingMethod?.data as Parameters<typeof formatDeliveryDestination>[0]
+  )
+
   return (
     <div>
       <Heading level="h2" className="flex flex-row text-3xl-regular my-6">
         Доставка
       </Heading>
-      <div className="flex max-[520px]:flex-col items-start gap-8">
+      <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8">
         <div
-          className="flex flex-col w-1/3 max-[520px]:w-full"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-address-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">
             Адреса доставки
           </Text>
-          <Text className="txt-medium text-ui-fg-subtle">
+          <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.shipping_address?.first_name}{" "}
             {order.shipping_address?.last_name}
           </Text>
-          <Text className="txt-medium text-ui-fg-subtle">
+          <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.shipping_address?.address_1}{" "}
             {order.shipping_address?.address_2}
           </Text>
-          <Text className="txt-medium text-ui-fg-subtle">
+          <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.shipping_address?.postal_code},{" "}
             {order.shipping_address?.city}
           </Text>
@@ -40,24 +47,34 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
         </div>
 
         <div
-          className="flex flex-col w-1/3 max-[520px]:w-full"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-contact-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Контакти</Text>
-          <Text className="txt-medium text-ui-fg-subtle">
+          <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.shipping_address?.phone}
           </Text>
-          <Text className="txt-medium text-ui-fg-subtle">{order.email}</Text>
+          <Text className="txt-medium text-ui-fg-subtle break-words">
+            {order.email}
+          </Text>
         </div>
 
         <div
-          className="flex flex-col w-1/3 max-[520px]:w-full"
+          className="flex flex-col w-full sm:w-1/3"
           data-testid="shipping-method-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Метод</Text>
-          <Text className="txt-medium text-ui-fg-subtle">
-            {(order.shipping_methods?.[0] as { name?: string })?.name}
+          <Text className="txt-medium text-ui-fg-subtle break-words">
+            {shippingMethod?.name}
           </Text>
+          {destinationText && (
+            <Text
+              className="txt-medium text-ui-fg-subtle break-words mt-1"
+              data-testid="shipping-method-destination"
+            >
+              {destinationText}
+            </Text>
+          )}
         </div>
       </div>
       <Divider className="mt-8" />

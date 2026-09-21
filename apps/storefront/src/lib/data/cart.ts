@@ -292,24 +292,6 @@ export async function setShippingMethod({
     .catch(medusaError)
 }
 
-export async function setCartDeliveryMetadata(
-  cartId: string,
-  delivery: Record<string, unknown>
-) {
-  const headers = {
-    ...(await getAuthHeaders()),
-  }
-
-  return sdk.store.cart
-    .update(cartId, { metadata: { delivery } }, {}, headers)
-    .then(async ({ cart }: { cart: HttpTypes.StoreCart }) => {
-      const cartCacheTag = await getCacheTag("carts")
-      updateTag(cartCacheTag)
-      return cart
-    })
-    .catch(medusaError)
-}
-
 export async function initiatePaymentSession(
   cart: HttpTypes.StoreCart,
   data: HttpTypes.StoreInitializePaymentSession

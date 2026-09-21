@@ -1,6 +1,7 @@
 import { defineWidgetConfig } from "@medusajs/admin-sdk"
 import { Container, Heading, Text } from "@medusajs/ui"
-
+import { useQuery } from "@tanstack/react-query"
+import { sdk } from "../lib/sdk"
 
 type DeliveryDestination = {
   carrier?: "nova-poshta" | "ukrposhta" | string
@@ -12,6 +13,9 @@ type DeliveryDestination = {
 
 type OrderData = {
   id: string
+  // Kept only as a fallback for orders placed before this widget switched
+  // to reading `shipping_methods[].data` directly (see below) — some older
+  // orders may only have the destination on `metadata.delivery`.
   metadata?: Record<string, unknown> | null
 }
 
@@ -27,7 +31,27 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 const OrderDeliveryDestinationWidget = ({ data }: { data?: OrderData }) => {
-  const delivery = data?.metadata?.delivery as DeliveryDestination | undefined
+  const { data: shippingMethodsResp } = useQuery({
+    queryKey: ["order-delivery-destination", data?.id],
+    queryFn: () =>
+      sdk.client.fetch<{
+        order: { shipping_methods?: Array<{ data?: Record<string, unknown> | null }> }
+      }>(`/admin/orders/${data!.id}`, {
+        query: { fields: "id,shipping_methods.data" },
+      }),
+    enabled: !!data?.id,
+  })
+
+  const shippingMethods = shippingMethodsResp?.order.shipping_methods
+  const fromShippingMethod = shippingMethods?.length
+    ? (shippingMethods[shippingMethods.length - 1].data as
+        | DeliveryDestination
+        | undefined)
+    : undefined
+  const fromMetadata = data?.metadata?.delivery as
+    | DeliveryDestination
+    | undefined
+  const delivery = fromShippingMethod ?? fromMetadata
 
   if (!delivery || (!delivery.city_name && !delivery.warehouse_name && !delivery.comment)) {
     return null

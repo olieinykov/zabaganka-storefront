@@ -12,6 +12,7 @@ type OrderItem = {
 type ShippingMethod = {
   name?: string | null
   total: Money
+  data?: Record<string, unknown> | null
 }
 
 type Address = {
@@ -102,7 +103,19 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
   const currency = order.currency_code
   const displayId = order.display_id ?? order.id
   const firstName = order.customer?.first_name || order.shipping_address?.first_name || ""
-  const delivery = (order.metadata?.delivery as Record<string, unknown> | undefined) || undefined
+  // Prefer the shipping method's own `data` (always present, set directly by
+  // our fulfillment providers) over `order.metadata.delivery` (only kept as
+  // a fallback for orders placed before this template switched over — see
+  // the perf note in `storefront/src/lib/data/cart.ts` / `checkout/components/shipping`
+  // about why the storefront no longer duplicates this onto cart metadata).
+  const deliveryFromShippingMethod = order.shipping_methods?.length
+    ? (order.shipping_methods[order.shipping_methods.length - 1]
+        .data as Record<string, unknown> | undefined)
+    : undefined
+  const deliveryFromMetadata = order.metadata?.delivery as
+    | Record<string, unknown>
+    | undefined
+  const delivery = deliveryFromShippingMethod || deliveryFromMetadata || undefined
 
   let calculatedItemTotal = 0
 
@@ -120,12 +133,23 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
 
     return `
       <tr>
-        <td style="padding:12px 0;border-bottom:1px solid #eee;">
+        ${
+          item.thumbnail
+            ? `<td style="width:80px;padding:12px 0;border-bottom:1px solid #eee;vertical-align:top;">
+                <img src="${escapeHtml(
+                  item.thumbnail
+                )}" width="64" height="64" style="border-radius:6px;object-fit:cover;display:block;" />
+              </td>`
+            : ""
+        }
+        <td style="padding:12px 0;border-bottom:1px solid #eee;${
+          item.thumbnail ? "padding-left:12px;" : ""
+        }">
           <div style="font-size:15px;color:#1a1a1a;font-weight:600;">${title}</div>
           ${variant ? `<div style="font-size:13px;color:#777;margin-top:2px;">${variant}</div>` : ""}
           <div style="font-size:13px;color:#777;margin-top:2px;">Кількість: ${qty}</div>
         </td>
-        <td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;font-size:15px;color:#1a1a1a;white-space:nowrap;">
+        <td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;font-size:15px;color:#1a1a1a;white-space:nowrap;vertical-align:top;">
           ${formatMoney(actualItemTotal, currency)}
         </td>
       </tr>`
@@ -156,6 +180,21 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Дякуємо за замовлення</title>
+    <style>
+      @media (max-width: 480px) {
+        .shipping-col {
+          display: block !important;
+          width: 100% !important;
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+          border-left: none !important;
+        }
+        .shipping-col + .shipping-col {
+          padding-top: 12px !important;
+          border-top: 1px solid #eee;
+        }
+      }
+    </style>
   </head>
   <body style="margin:0;padding:0;background-color:#f7f5f2;font-family:Georgia,'Times New Roman',serif;">
     <div style="max-width:600px;margin:0 auto;padding:32px 16px;">
@@ -177,24 +216,6 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
         </table>
 
         <table style="width:100%;margin-top:16px;font-size:14px;color:#444;">
-          ${
-            calculatedItemTotal !== undefined
-              ? `<tr><td style="padding:4px 0;">Товари</td><td style="padding:4px 0;text-align:right;">${formatMoney(
-                  calculatedItemTotal,
-                  currency
-                )}</td></tr>`
-              : ""
-          }
-          ${
-            actualShippingTotal !== undefined
-              ? `<tr><td style="padding:4px 0;">Доставка${
-                  shippingMethodName ? ` (${shippingMethodName})` : ""
-                }</td><td style="padding:4px 0;text-align:right;">${formatMoney(
-                  actualShippingTotal,
-                  currency
-                )}</td></tr>`
-              : ""
-          }
           <tr style="border-top:1px solid #eee;">
             <td style="padding:10px 0 0;font-weight:700;color:#1a1a1a;">Разом</td>
             <td style="padding:10px 0 0;text-align:right;font-weight:700;color:#1a1a1a;">
@@ -204,15 +225,34 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
         </table>
 
         ${
-          deliveryLine || order.shipping_address
-            ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:13px;color:#666;">
-                <div style="font-weight:600;color:#1a1a1a;margin-bottom:4px;">Доставка</div>
-                ${deliveryLine ? `<div>${deliveryLine}</div>` : ""}
-                ${
-                  order.shipping_address?.address_1
-                    ? `<div>${escapeHtml(order.shipping_address.address_1)}</div>`
-                    : ""
-                }
+          shippingMethodName || deliveryLine || order.shipping_address
+            ? `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;">
+                <div style="font-weight:600;color:#1a1a1a;font-size:13px;margin-bottom:8px;">Доставка</div>
+                <table role="presentation" width="100%" style="border-collapse:collapse;">
+                  <tr>
+                    <td class="shipping-col" style="vertical-align:top;width:50%;padding-right:12px;font-size:13px;color:#666;">
+                      ${
+                        shippingMethodName
+                          ? `<div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">Спосіб доставки</div>
+                             <div>${shippingMethodName}</div>`
+                          : ""
+                      }
+                    </td>
+                    <td class="shipping-col" style="vertical-align:top;width:50%;padding-left:12px;border-left:1px solid #eee;font-size:13px;color:#666;">
+                      ${
+                        deliveryLine || order.shipping_address?.address_1
+                          ? `<div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">Адреса доставки</div>
+                             ${deliveryLine ? `<div>${deliveryLine}</div>` : ""}
+                             ${
+                               order.shipping_address?.address_1
+                                 ? `<div>${escapeHtml(order.shipping_address.address_1)}</div>`
+                                 : ""
+                             }`
+                          : ""
+                      }
+                    </td>
+                  </tr>
+                </table>
               </div>`
             : ""
         }
