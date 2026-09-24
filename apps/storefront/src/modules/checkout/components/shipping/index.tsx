@@ -84,6 +84,7 @@ function isSameAsSavedMethod(
   return (
     (data.city_ref ?? undefined) === (saved.city_ref ?? undefined) &&
     (data.warehouse_ref ?? undefined) === (saved.warehouse_ref ?? undefined) &&
+    (data.address ?? undefined) === (saved.address ?? undefined) &&
     (data.comment ?? undefined) === (saved.comment ?? undefined)
   )
 }
@@ -131,6 +132,7 @@ const Shipping: React.FC<ShippingProps> = ({
         city_name?: string
         warehouse_ref?: string
         warehouse_name?: string
+        address?: string
         comment?: string
       })
     | undefined
@@ -449,25 +451,9 @@ const Shipping: React.FC<ShippingProps> = ({
                         optionData?.carrier === "ukrposhta") &&
                       optionData?.type
                     ) {
-                      // Don't call the API yet — wait for a valid destination
-                      // (city + warehouse/postomat, or courier comment).
                       setError(null)
                       setShippingMethodId(v)
                       setDestinationOption(option)
-                      // Always start unconfirmed on an interactive change —
-                      // even when switching back to the option that's
-                      // currently saved on the cart. Previously this compared
-                      // against the saved cart to decide, which meant
-                      // switching away to a different Nova Poshta option and
-                      // back (without ever filling that other option in)
-                      // could re-enable "Продовжити" instantly, before
-                      // <DeliveryDestination /> below had actually
-                      // remounted and re-confirmed anything for this render.
-                      // <DeliveryDestination />'s own onChange (fired right
-                      // after it mounts, pre-filled from the saved data —
-                      // see `initialValue` below) is what flips this back to
-                      // `true`, so the button only unlocks once that real
-                      // round trip has happened.
                       setIsDestinationConfirmed(false)
                       return
                     }

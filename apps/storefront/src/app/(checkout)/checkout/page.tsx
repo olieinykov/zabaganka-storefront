@@ -1,4 +1,6 @@
+import { isMono } from "@lib/constants"
 import { retrieveCart } from "@lib/data/cart"
+import { fetchMonoStatus } from "@lib/data/mono"
 import { retrieveCustomer } from "@lib/data/customer"
 import { CHECKOUT_STEPS, getCheckoutStep } from "@lib/util/get-checkout-step"
 import CartAvailabilityGuard from "@modules/cart/components/cart-availability-guard"
@@ -21,6 +23,21 @@ export default async function Checkout({ searchParams }: Props) {
 
   if (!cart || (cart.items?.length ?? 0) === 0) {
     return notFound()
+  }
+
+  const monoSession = cart.payment_collection?.payment_sessions?.find((session) =>
+    isMono(session.provider_id)
+  )
+  if (monoSession) {
+    const monoStatus = await fetchMonoStatus(monoSession.id).catch(() => null)
+    if (
+      monoStatus &&
+      (monoStatus.ready_to_complete_order || monoStatus.status === "processing")
+    ) {
+      redirect(
+        `/checkout/mono/return?session_id=${encodeURIComponent(monoSession.id)}`
+      )
+    }
   }
 
   const customer = await retrieveCustomer()

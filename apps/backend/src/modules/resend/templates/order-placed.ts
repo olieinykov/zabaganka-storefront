@@ -168,6 +168,7 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
     ? [
         delivery.city_name ? `м. ${escapeHtml(String(delivery.city_name))}` : null,
         delivery.warehouse_name ? escapeHtml(String(delivery.warehouse_name)) : null,
+        delivery.address ? escapeHtml(String(delivery.address)) : null,
         delivery.comment ? escapeHtml(String(delivery.comment)) : null,
       ]
         .filter(Boolean)
@@ -244,7 +245,7 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
                           ? `<div style="font-weight:600;color:#1a1a1a;margin-bottom:2px;">Адреса доставки</div>
                              ${deliveryLine ? `<div>${deliveryLine}</div>` : ""}
                              ${
-                               order.shipping_address?.address_1
+                               !deliveryLine && order.shipping_address?.address_1
                                  ? `<div>${escapeHtml(order.shipping_address.address_1)}</div>`
                                  : ""
                              }`

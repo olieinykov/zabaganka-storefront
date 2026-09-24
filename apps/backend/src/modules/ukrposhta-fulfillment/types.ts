@@ -63,5 +63,7 @@ export type UkrposhtaShippingMethodData = {
   city_name?: string
   warehouse_ref?: string
   warehouse_name?: string
+  /** For courier delivery: street, house and apartment. */
+  address?: string
   comment?: string
 }

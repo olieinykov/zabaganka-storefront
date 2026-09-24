@@ -15,6 +15,7 @@ import {
 } from "./cookies"
 import { getRegion } from "./regions"
 import { getLocale } from "./locale-actions"
+import { COUNTRY_CODE } from "@lib/constants"
 
 export async function retrieveCart(cartId?: string, fields?: string) {
   const id = cartId || (await getCartId())
@@ -38,7 +39,11 @@ export async function retrieveCart(cartId?: string, fields?: string) {
       headers,
       cache: "no-store",
     })
-    .then(({ cart }: { cart: HttpTypes.StoreCart }) => cart)
+    .then(({ cart }: { cart: HttpTypes.StoreCart }) =>
+      (cart as unknown as { completed_at?: string | null }).completed_at
+        ? null
+        : cart
+    )
     .catch(() => null)
 }
 
@@ -50,11 +55,6 @@ export async function getOrSetCart(countryCode: string) {
   }
 
   let cart = await retrieveCart(undefined, "id,region_id,completed_at")
-
-  if (cart && (cart as unknown as { completed_at?: string | null }).completed_at) {
-    await removeCartId()
-    cart = null
-  }
 
   const headers = {
     ...(await getAuthHeaders()),
@@ -265,6 +265,42 @@ export async function deleteLineItem(lineId: string) {
     })
 }
 
+async function syncDeliveryAddress(
+  cartId: string,
+  data: Record<string, unknown>,
+  headers: Record<string, string>
+) {
+  const cart = await retrieveCart(cartId, "*shipping_address")
+  const current = cart?.shipping_address
+  if (!current) {
+    return
+  }
+
+  const addressLine =
+    data.type === "courier" && typeof data.address === "string"
+      ? data.address.trim()
+      : ""
+  const city = typeof data.city_name === "string" ? data.city_name : ""
+
+  if ((current.address_1 || "") === addressLine && (current.city || "") === city) {
+    return
+  }
+
+  // Medusa replaces the whole address on update, so resend every field.
+  const address = {
+    first_name: current.first_name || "",
+    last_name: current.last_name || "",
+    phone: current.phone || "",
+    country_code: current.country_code || COUNTRY_CODE,
+    address_1: addressLine,
+    city,
+  }
+
+  await sdk.store.cart
+    .update(cartId, { shipping_address: address }, {}, headers)
+    .catch(medusaError)
+}
+
 export async function setShippingMethod({
   cartId,
   shippingMethodId,
@@ -276,6 +312,10 @@ export async function setShippingMethod({
 }) {
   const headers = {
     ...(await getAuthHeaders()),
+  }
+
+  if (data?.carrier) {
+    await syncDeliveryAddress(cartId, data, headers)
   }
 
   return sdk.store.cart
@@ -392,49 +432,60 @@ export async function removeGiftCard(
 //   }
 // }
 
-// TODO: Pass a POJO instead of a form entity here
+function formValue(formData: FormData, key: string) {
+  const value = formData.get(key)
+  return typeof value === "string" ? value.trim() : ""
+}
+
+/**
+ * Checkout "recipient" step: only the name, email and an optional phone are
+ * collected here. The delivery destination is picked on the next step (and
+ * for courier delivery written into `address_1`/`city` by
+ * setShippingMethod), so the street/city already on the cart are carried
+ * over instead of being wiped: Medusa replaces the whole address object on
+ * update rather than merging it.
+ */
 export async function setAddresses(currentState: unknown, formData: FormData) {
   try {
     if (!formData) {
       throw new Error("No form data found when setting addresses")
     }
-    const cartId = getCartId()
+    const cartId = await getCartId()
     if (!cartId) {
       throw new Error("No existing cart found when setting addresses")
     }
 
+    const firstName = formValue(formData, "shipping_address.first_name")
+    const lastName = formValue(formData, "shipping_address.last_name")
+    const email = formValue(formData, "email")
+
+    if (!firstName || !lastName || !email) {
+      return "Заповніть ім'я, прізвище та електронну пошту."
+    }
+
+    const current = await retrieveCart(cartId, "*shipping_address")
+    const currentAddress = current?.shipping_address
+
+    const address = {
+      first_name: firstName,
+      last_name: lastName,
+      phone: formValue(formData, "shipping_address.phone"),
+      country_code:
+        formValue(formData, "shipping_address.country_code") ||
+        currentAddress?.country_code ||
+        COUNTRY_CODE,
+      address_1: currentAddress?.address_1 || "",
+      city: currentAddress?.city || "",
+    }
+
+    // Billing address is not asked for anymore; Medusa and the payment
+    // step still expect one, so it mirrors the recipient.
     const data = {
-      shipping_address: {
-        first_name: formData.get("shipping_address.first_name"),
-        last_name: formData.get("shipping_address.last_name"),
-        address_1: formData.get("shipping_address.address_1"),
-        address_2: "",
-        company: formData.get("shipping_address.company"),
-        postal_code: formData.get("shipping_address.postal_code"),
-        city: formData.get("shipping_address.city"),
-        country_code: formData.get("shipping_address.country_code"),
-        province: formData.get("shipping_address.province"),
-        phone: formData.get("shipping_address.phone"),
-      },
-      email: formData.get("email"),
-    } as any
+      shipping_address: address,
+      billing_address: address,
+      email,
+    }
 
-    const sameAsBilling = formData.get("same_as_billing")
-    if (sameAsBilling === "on") data.billing_address = data.shipping_address
-
-    if (sameAsBilling !== "on")
-      data.billing_address = {
-        first_name: formData.get("billing_address.first_name"),
-        last_name: formData.get("billing_address.last_name"),
-        address_1: formData.get("billing_address.address_1"),
-        address_2: "",
-        company: formData.get("billing_address.company"),
-        postal_code: formData.get("billing_address.postal_code"),
-        city: formData.get("billing_address.city"),
-        country_code: formData.get("billing_address.country_code"),
-        province: formData.get("billing_address.province"),
-        phone: formData.get("billing_address.phone"),
-      }
     await updateCart(data)
   } catch (e: any) {
     return e.message
@@ -478,6 +529,42 @@ export async function placeOrder(cartId?: string) {
   }
 
   return cartRes.cart
+}
+
+/**
+ * Drops the cart cookie when the cart was already turned into an order by
+ * the backend (mono webhook / mono-complete-paid-orders job) rather than by
+ * placeOrder() above, which clears it itself.
+ */
+export async function clearCompletedCart() {
+  const id = await getCartId()
+  if (!id) {
+    return
+  }
+
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  const cart = await sdk.client
+    .fetch<HttpTypes.StoreCartResponse>(`/store/carts/${id}`, {
+      method: "GET",
+      query: { fields: "id,completed_at" },
+      headers,
+      cache: "no-store",
+    })
+    .then(({ cart }) => cart as unknown as { completed_at?: string | null })
+    .catch(() => null)
+
+  if (!cart?.completed_at) {
+    return
+  }
+
+  await removeCartId()
+  const cartCacheTag = await getCacheTag("carts")
+  updateTag(cartCacheTag)
+  const orderCacheTag = await getCacheTag("orders")
+  updateTag(orderCacheTag)
 }
 
 export async function listCartOptions() {

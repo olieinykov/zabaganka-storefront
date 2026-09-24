@@ -3,6 +3,7 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 import { capturePaymentWorkflow } from "@medusajs/core-flows"
 import { MonoLedgerRepository } from "../modules/mono-payment/repository"
 import { fromMinorUnits } from "../modules/mono-payment/money"
+import { MONO_PROVIDER_IDS } from "../modules/mono-payment/paid-session-guard"
 
 export default async function monoAttachOrderHandler({
   event: { data },
@@ -32,18 +33,10 @@ export default async function monoAttachOrderHandler({
 
     const monoSession = order.payment_collections
       ?.flatMap((pc: any) => pc.payment_sessions ?? [])
-      ?.find((ps: any) =>
-        ["pp_mono_mono", "pp_mono-prepayment_mono-prepayment"].includes(
-          ps.provider_id
-        )
-      )
+      ?.find((ps: any) => MONO_PROVIDER_IDS.includes(ps.provider_id))
     const monoPayment = order.payment_collections
       ?.flatMap((pc: any) => pc.payments ?? [])
-      ?.find((payment: any) =>
-        ["pp_mono_mono", "pp_mono-prepayment_mono-prepayment"].includes(
-          payment.provider_id
-        )
-      )
+      ?.find((payment: any) => MONO_PROVIDER_IDS.includes(payment.provider_id))
 
     const invoiceId = (monoSession?.data?.mono_invoice_id ??
       monoPayment?.data?.mono_invoice_id) as string | undefined

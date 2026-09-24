@@ -15,6 +15,11 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
   const destinationText = formatDeliveryDestination(
     shippingMethod?.data as Parameters<typeof formatDeliveryDestination>[0]
   )
+  const fallbackAddress = destinationText
+    ? null
+    : [order.shipping_address?.address_1, order.shipping_address?.city]
+        .filter(Boolean)
+        .join(", ") || null
 
   return (
     <div>
@@ -27,22 +32,11 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
           data-testid="shipping-address-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">
-            Адреса доставки
+            Отримувач
           </Text>
           <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.shipping_address?.first_name}{" "}
             {order.shipping_address?.last_name}
-          </Text>
-          <Text className="txt-medium text-ui-fg-subtle break-words">
-            {order.shipping_address?.address_1}{" "}
-            {order.shipping_address?.address_2}
-          </Text>
-          <Text className="txt-medium text-ui-fg-subtle break-words">
-            {order.shipping_address?.postal_code},{" "}
-            {order.shipping_address?.city}
-          </Text>
-          <Text className="txt-medium text-ui-fg-subtle">
-            {order.shipping_address?.country_code?.toUpperCase()}
           </Text>
         </div>
 
@@ -51,9 +45,11 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
           data-testid="shipping-contact-summary"
         >
           <Text className="txt-medium-plus text-ui-fg-base mb-1">Контакти</Text>
-          <Text className="txt-medium text-ui-fg-subtle break-words">
-            {order.shipping_address?.phone}
-          </Text>
+          {order.shipping_address?.phone && (
+            <Text className="txt-medium text-ui-fg-subtle break-words">
+              {order.shipping_address.phone}
+            </Text>
+          )}
           <Text className="txt-medium text-ui-fg-subtle break-words">
             {order.email}
           </Text>
@@ -67,12 +63,12 @@ const ShippingDetails = ({ order }: ShippingDetailsProps) => {
           <Text className="txt-medium text-ui-fg-subtle break-words">
             {shippingMethod?.name}
           </Text>
-          {destinationText && (
+          {(destinationText || fallbackAddress) && (
             <Text
               className="txt-medium text-ui-fg-subtle break-words mt-1"
               data-testid="shipping-method-destination"
             >
-              {destinationText}
+              {destinationText || fallbackAddress}
             </Text>
           )}
         </div>

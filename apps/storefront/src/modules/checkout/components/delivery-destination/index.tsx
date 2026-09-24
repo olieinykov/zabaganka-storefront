@@ -21,6 +21,8 @@ export type DeliveryDestinationValue = {
   city_name?: string
   warehouse_ref?: string
   warehouse_name?: string
+  /** Street, house and apartment — courier delivery only. */
+  address?: string
   comment?: string
 }
 
@@ -28,8 +30,8 @@ type Props = {
   carrier: DeliveryCarrier
   type: DeliveryType
   /** Called with `null` while the selection is incomplete, and with the full
-   *  value as soon as it becomes valid (city + warehouse, or just a comment
-   *  for courier delivery). */
+   *  value as soon as it becomes valid (city + warehouse, or city + street
+   *  address for courier delivery). */
   onChange: (value: DeliveryDestinationValue | null) => void
   initialValue?: Partial<DeliveryDestinationValue>
 }
@@ -87,10 +89,12 @@ const DeliveryDestination: React.FC<Props> = ({
   const [warehouseLoading, setWarehouseLoading] = useState(false)
 
   const [comment, setComment] = useState(initialValue?.comment || "")
+  const [address, setAddress] = useState(initialValue?.address || "")
 
   const debouncedCityQuery = useDebouncedValue(cityQuery, 350)
   const debouncedWarehouseQuery = useDebouncedValue(warehouseQuery, 300)
   const debouncedComment = useDebouncedValue(comment, 600)
+  const debouncedAddress = useDebouncedValue(address, 600)
 
   const searchCities = useMemo(
     () => (carrier === "nova-poshta" ? searchNovaPoshtaCities : searchUkrposhtaCities),
@@ -163,12 +167,14 @@ const DeliveryDestination: React.FC<Props> = ({
   // Propagate a valid selection up to the parent
   useEffect(() => {
     if (type === "courier") {
-      if (selectedCity) {
+      const trimmedAddress = debouncedAddress.trim()
+      if (selectedCity && trimmedAddress) {
         onChange({
           carrier,
           type,
           city_ref: selectedCity.ref,
           city_name: selectedCity.name,
+          address: trimmedAddress,
           comment: debouncedComment || undefined,
         })
       } else {
@@ -190,7 +196,14 @@ const DeliveryDestination: React.FC<Props> = ({
       onChange(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCity, selectedWarehouse, debouncedComment, carrier, type])
+  }, [
+    selectedCity,
+    selectedWarehouse,
+    debouncedComment,
+    debouncedAddress,
+    carrier,
+    type,
+  ])
 
   const cityBoxRef = useRef<HTMLDivElement>(null)
   const warehouseBoxRef = useRef<HTMLDivElement>(null)
@@ -261,6 +274,21 @@ const DeliveryDestination: React.FC<Props> = ({
         {cityAutocomplete}
         <div>
           <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
+            Адреса<span className="text-rose-500">*</span>
+          </label>
+          <input
+            type="text"
+            className="w-full rounded-md border border-ui-border-base px-3 py-2 txt-compact-medium focus:outline-none focus:shadow-borders-interactive-with-active"
+            placeholder="Вулиця, будинок, квартира"
+            autoComplete="street-address"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+            data-testid="delivery-courier-address"
+          />
+        </div>
+        <div>
+          <label className="txt-compact-small-plus text-ui-fg-subtle mb-1 block">
             Коментар для кур&apos;єра (під&apos;їзд, поверх, домофон)
           </label>
           <textarea
@@ -272,9 +300,10 @@ const DeliveryDestination: React.FC<Props> = ({
             data-testid="delivery-courier-comment"
           />
         </div>
-        {!selectedCity ? (
+        {!selectedCity || !address.trim() ? (
           <Text className="txt-compact-small text-ui-fg-subtle">
-            Оберіть місто, щоб продовжити оформлення замовлення.
+            Оберіть місто та вкажіть адресу, щоб продовжити оформлення
+            замовлення.
           </Text>
         ) : null}
       </div>

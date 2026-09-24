@@ -101,12 +101,11 @@ class ResendNotificationProviderService extends AbstractNotificationProviderServ
     })
 
     if (error || !data) {
-      this.logger.error(
-        `[resend] Failed to send "${notification.template}" email to ${notification.to}: ${
-          error?.message || "unknown error"
-        }`
-      )
-      return {}
+      const message = `[resend] Failed to send "${notification.template}" email to ${notification.to}: ${
+        error?.message || "unknown error"
+      }`
+      this.logger.error(message)
+      throw new MedusaError(MedusaError.Types.UNEXPECTED_STATE, message)
     }
 
     return { id: data.id }

@@ -7,6 +7,7 @@ import type {
 } from "@medusajs/framework/types"
 import { UkrposhtaClient } from "./client"
 import { UkrposhtaOptions, UkrposhtaDeliveryType } from "./types"
+import { resolveCourierAddress } from "../../lib/courier-address"
 
 type InjectedDependencies = {
   logger: Logger
@@ -100,20 +101,29 @@ class UkrposhtaFulfillmentProviderService extends AbstractFulfillmentProviderSer
     }
 
     if (type === "courier") {
-      const shippingAddress = context?.shipping_address as
-        | { address_1?: string; city?: string }
-        | undefined
-
-      if (!shippingAddress?.address_1 || !shippingAddress?.city) {
+      const address = resolveCourierAddress(data, context)
+      if (!address) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          "A full shipping address (street and city) is required for Ukrposhta courier delivery."
+          "Вкажіть адресу для доставки кур'єром (вулиця, будинок, квартира)."
+        )
+      }
+
+      const cityRef = data?.city_ref as string | undefined
+      const cityName = data?.city_name as string | undefined
+      if (!cityRef && !cityName) {
+        throw new MedusaError(
+          MedusaError.Types.INVALID_DATA,
+          "Оберіть місто для доставки кур'єром."
         )
       }
 
       return attachEstimatedCost({
         carrier: "ukrposhta",
         type,
+        city_ref: cityRef,
+        city_name: cityName,
+        address,
         comment: (data?.comment as string) || undefined,
       })
     }

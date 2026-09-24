@@ -12,6 +12,7 @@ import {
   NovaPoshtaDeliveryType,
 } from "./types"
 import { estimatePackage, type CartItemForSizing } from "./package-estimate"
+import { resolveCourierAddress } from "../../lib/courier-address"
 
 type InjectedDependencies = {
   logger: Logger
@@ -138,31 +139,21 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
     }
 
     if (type === "courier") {
-      const shippingAddress = context?.shipping_address as
-        | { address_1?: string; city?: string }
-        | undefined
-
-      if (!shippingAddress?.address_1 || !shippingAddress?.city) {
+      const address = resolveCourierAddress(data, context)
+      if (!address) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          "A full shipping address (street and city) is required for Nova Poshta courier delivery."
+          "Вкажіть адресу для доставки кур'єром (вулиця, будинок, квартира)."
         )
       }
 
-      // Nova Poshta's own price calculation needs a real `CityRecipient`
-      // Ref for the destination city (see `calculatePrice` below) — the
-      // free-text `shipping_address.city` above isn't one, it's just
-      // whatever the customer typed into the address form. The storefront
-      // resolves an actual Ref via the same Nova Poshta city autocomplete
-      // used for warehouse/postomat delivery (see
-      // `DeliveryDestination`), so it must be present here too.
       const cityRef = data?.city_ref as string
       const cityName = data?.city_name as string
 
       if (!cityRef) {
         throw new MedusaError(
           MedusaError.Types.INVALID_DATA,
-          "city_ref is required for Nova Poshta courier delivery."
+          "Оберіть місто для доставки кур'єром."
         )
       }
 
@@ -176,6 +167,7 @@ class NovaPoshtaFulfillmentProviderService extends AbstractFulfillmentProviderSe
         type,
         city_ref: cityRef,
         city_name: cityName,
+        address,
         comment: (data?.comment as string) || undefined,
       }
     }

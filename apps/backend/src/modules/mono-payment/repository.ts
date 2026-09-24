@@ -36,6 +36,8 @@ export type MonoInvoiceRow = {
   fiscal_check_url: string | null
   fiscal_check_status: string | null
   fiscal_check_checked_at: Date | null
+  order_completion_checked_at: Date | null
+  order_completion_error: string | null
   created_at: Date
   updated_at: Date
 }
@@ -165,6 +167,41 @@ export class MonoLedgerRepository {
           .whereNull("fiscal_check_checked_at")
           .orWhere("fiscal_check_checked_at", "<", recheckCutoff)
       )
+  }
+
+  async findByPaymentSessionIds(sessionIds: string[]): Promise<MonoInvoiceRow[]> {
+    if (!sessionIds.length) return []
+    return this.pg("mono_invoice").whereIn("payment_session_id", sessionIds)
+  }
+
+  async listPaidWithoutOrder(input: {
+    settledBeforeMinutes: number
+    recheckAfterMinutes: number
+    stopCheckingAfterHours: number
+  }): Promise<MonoInvoiceRow[]> {
+    const settledCutoff = new Date(Date.now() - input.settledBeforeMinutes * 60_000)
+    const recheckCutoff = new Date(Date.now() - input.recheckAfterMinutes * 60_000)
+    const giveUpCutoff = new Date(Date.now() - input.stopCheckingAfterHours * 3_600_000)
+
+    return this.pg("mono_invoice")
+      .whereIn("status", ["hold", "success"])
+      .whereNull("order_id")
+      .andWhere("updated_at", "<", settledCutoff)
+      .andWhere("created_at", ">", giveUpCutoff)
+      .andWhere((builder: any) =>
+        builder
+          .whereNull("order_completion_checked_at")
+          .orWhere("order_completion_checked_at", "<", recheckCutoff)
+      )
+  }
+
+  async recordOrderCompletionAttempt(id: string, error: string | null) {
+    await this.pg("mono_invoice")
+      .where({ id })
+      .update({
+        order_completion_checked_at: new Date(),
+        order_completion_error: error,
+      })
   }
 
   async applyStatus(input: {

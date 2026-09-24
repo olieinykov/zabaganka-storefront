@@ -2,6 +2,7 @@ export type DeliveryDestinationData = {
   type?: "warehouse" | "postomat" | "courier"
   city_name?: string
   warehouse_name?: string
+  address?: string
   comment?: string
 }
 
@@ -26,10 +27,11 @@ export function formatDeliveryDestination(
 
   if (data.type === "courier") {
     const cityPart = data.city_name ? `м. ${data.city_name}` : null
+    const place = [cityPart, data.address].filter(Boolean).join(", ")
     const commentPart = data.comment
       ? `Коментар: ${truncateComment(data.comment)}`
       : null
-    return [cityPart, commentPart].filter(Boolean).join(". ") || null
+    return [place, commentPart].filter(Boolean).join(". ") || null
   }
 
   // "warehouse" | "postomat"

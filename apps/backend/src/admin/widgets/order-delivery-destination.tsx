@@ -8,6 +8,7 @@ type DeliveryDestination = {
   type?: "warehouse" | "postomat" | "courier" | string
   city_name?: string
   warehouse_name?: string
+  address?: string
   comment?: string
 }
 
@@ -53,7 +54,10 @@ const OrderDeliveryDestinationWidget = ({ data }: { data?: OrderData }) => {
     | undefined
   const delivery = fromShippingMethod ?? fromMetadata
 
-  if (!delivery || (!delivery.city_name && !delivery.warehouse_name && !delivery.comment)) {
+  if (
+    !delivery ||
+    (!delivery.city_name && !delivery.warehouse_name && !delivery.address && !delivery.comment)
+  ) {
     return null
   }
 
@@ -89,6 +93,16 @@ const OrderDeliveryDestinationWidget = ({ data }: { data?: OrderData }) => {
             </Text>
             <Text size="small" className="text-right">
               {delivery.warehouse_name}
+            </Text>
+          </div>
+        )}
+        {delivery.address && (
+          <div className="flex justify-between">
+            <Text size="small" className="text-ui-fg-subtle">
+              Адреса
+            </Text>
+            <Text size="small" className="text-right">
+              {delivery.address}
             </Text>
           </div>
         )}

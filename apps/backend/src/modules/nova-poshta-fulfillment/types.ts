@@ -76,6 +76,8 @@ export type NovaPoshtaShippingMethodData = {
   city_name?: string
   warehouse_ref?: string
   warehouse_name?: string
+  /** For courier delivery: street, house and apartment. */
+  address?: string
   /** For courier delivery, additional comment (e.g. entrance/floor). */
   comment?: string
   /** Admin-only estimate from Nova Poshta's tariff API — not charged to the customer. */

@@ -32,7 +32,11 @@ export function getCheckoutStep(
     return "address"
   }
 
-  if (!cart.shipping_address?.address_1 || !cart.email) {
+  if (
+    !cart.shipping_address?.first_name ||
+    !cart.shipping_address?.last_name ||
+    !cart.email
+  ) {
     return "address"
   }
 

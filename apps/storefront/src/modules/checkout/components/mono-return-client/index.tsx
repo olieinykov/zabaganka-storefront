@@ -1,6 +1,6 @@
 "use client"
 
-import { placeOrder } from "@lib/data/cart"
+import { clearCompletedCart, placeOrder } from "@lib/data/cart"
 import { fetchMonoStatus, type MonoStatusResponse } from "@lib/data/mono"
 import { Button, Heading, Text } from "@modules/common/components/ui"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
@@ -29,7 +29,8 @@ export default function MonoReturnClient({ sessionId }: { sessionId: string }) {
   const pollCount = useRef(0)
   const cancelled = useRef(false)
 
-  const completeWithOrder = useCallback((id: string) => {
+  const completeWithOrder = useCallback(async (id: string) => {
+    await clearCompletedCart().catch(() => {})
     router.replace(`/order/${id}/confirmed`)
   }, [router])
 
@@ -44,13 +45,13 @@ export default function MonoReturnClient({ sessionId }: { sessionId: string }) {
         }
 
         const message = err instanceof Error ? err.message : String(err)
-        if (/no existing cart/i.test(message)) {
+        if (/no existing cart|already completed|вже оформлено/i.test(message)) {
           for (let i = 0; i < 5; i++) {
             await new Promise((r) => setTimeout(r, 1500))
             try {
               const fresh = await fetchMonoStatus(sessionId)
               if (fresh.order_id) {
-                completeWithOrder(fresh.order_id)
+                await completeWithOrder(fresh.order_id)
                 return
               }
             } catch {
@@ -74,7 +75,7 @@ export default function MonoReturnClient({ sessionId }: { sessionId: string }) {
         setView("completing")
 
         if (data.order_id) {
-          completeWithOrder(data.order_id)
+          await completeWithOrder(data.order_id)
           return
         }
 
