@@ -8,7 +8,9 @@ import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getPublicCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
-import { PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
+import { COUNTRY_CODE, PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
+import { getProductPrice } from "@lib/util/get-product-price"
+import { productMatchesSearch, tokenizeSearchQuery } from "@lib/util/search"
 
 type ProductListQueryParams = (HttpTypes.FindParams &
   HttpTypes.StoreProductListParams) & {
@@ -120,8 +122,11 @@ export const listProductsWithSort = async ({
     new Set((optionValueIds || []).filter(Boolean))
   )
 
+  const { q, ...restQueryParams } = queryParams || {}
+  const searchTokens = tokenizeSearchQuery(q)
+
   const baseQueryParams: ProductListQueryParams = {
-    ...queryParams,
+    ...restQueryParams,
     ...(optionFilters.length ? { option_value_id: optionFilters } : {}),
   }
 
@@ -132,14 +137,21 @@ export const listProductsWithSort = async ({
     queryParams: {
       ...baseQueryParams,
       fields:
-        "id,created_at,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,+variants.allow_backorder",
+        "id,created_at,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,+variants.allow_backorder" +
+        (searchTokens.length ? ",title" : ""),
       limit: MAX_PRICE_SORT_BATCH,
       order: "-created_at",
     },
     countryCode,
   })
 
-  const withStock = lightProducts.map((product) => ({
+  const matchedProducts = searchTokens.length
+    ? lightProducts.filter((product) =>
+        productMatchesSearch(product, searchTokens)
+      )
+    : lightProducts
+
+  const withStock = matchedProducts.map((product) => ({
     product,
     inStock: isProductInStock(product),
   }))
@@ -203,5 +215,59 @@ export const listProductsWithSort = async ({
     response: { products: orderedPageProducts, count },
     nextPage,
     queryParams,
+  }
+}
+
+const SEARCH_PREVIEW_LIMIT = 4
+const SEARCH_MIN_QUERY_LENGTH = 2
+
+export type SearchPreviewProduct = {
+  id: string
+  handle: string
+  title: string
+  thumbnail: string | null
+  price: {
+    calculated_price: string
+    original_price: string
+    price_type: string
+  } | null
+}
+
+export const searchProducts = async (
+  query: string
+): Promise<{ products: SearchPreviewProduct[]; count: number }> => {
+  const q = query.trim()
+
+  if (q.length < SEARCH_MIN_QUERY_LENGTH) {
+    return { products: [], count: 0 }
+  }
+
+  const {
+    response: { products, count },
+  } = await listProductsWithSort({
+    page: 1,
+    queryParams: { q, limit: SEARCH_PREVIEW_LIMIT },
+    countryCode: COUNTRY_CODE,
+  })
+
+  return {
+    count,
+    products: products.map((product) => {
+      const { cheapestPrice } = getProductPrice({ product })
+
+      return {
+        id: product.id,
+        handle: product.handle,
+        title: product.title,
+        thumbnail: product.thumbnail || product.images?.[0]?.url || null,
+        price: cheapestPrice
+          ? {
+              calculated_price: cheapestPrice.calculated_price,
+              original_price: cheapestPrice.original_price,
+              price_type: cheapestPrice.price_type,
+            }
+          : null,
+      }
+    }),
   }
 }

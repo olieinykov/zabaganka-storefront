@@ -9,9 +9,9 @@ import Logo from "@modules/layout/components/logo"
 import MobileMenuTrigger, {
   NavLink,
 } from "@modules/layout/components/mobile-menu"
+import SearchPanel from "@modules/layout/components/search-panel"
 // ACCOUNT FEATURE: used by the commented-out account link below.
 // import Heart from "@modules/common/icons/heart"
-import Search from "@modules/common/icons/search"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
 export default async function Nav({
@@ -47,13 +47,7 @@ export default async function Nav({
             <Logo className="justify-self-center" />
 
             <div className="flex items-center justify-end gap-5">
-              <button
-                type="button"
-                aria-label="Пошук"
-                className="hidden small:inline-flex interactive interactive-lift text-ink hover:text-navy"
-              >
-                <Search size={19} />
-              </button>
+              <SearchPanel />
               {/* ACCOUNT FEATURE: link to the customer account, disabled until
                   the account area is brought back. Restore together with the
                   `Heart` import above.

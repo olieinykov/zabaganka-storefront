@@ -13,6 +13,7 @@ type PaginatedProductsParams = {
   category_id?: string[]
   id?: string[]
   order?: string
+  q?: string
 }
 
 export default async function PaginatedProducts({
@@ -24,6 +25,8 @@ export default async function PaginatedProducts({
   countryCode,
   optionValueIds,
   inStockOnly,
+  q,
+  emptyState,
 }: {
   sortBy?: SortOptions
   page: number
@@ -33,6 +36,9 @@ export default async function PaginatedProducts({
   countryCode: string
   optionValueIds?: OptionValueIds
   inStockOnly?: boolean
+  q?: string
+  /** Rendered instead of the grid when nothing matches */
+  emptyState?: React.ReactNode
 }) {
   const queryParams: PaginatedProductsParams = {
     limit: 12,
@@ -48,6 +54,10 @@ export default async function PaginatedProducts({
 
   if (productsIds) {
     queryParams["id"] = productsIds
+  }
+
+  if (q) {
+    queryParams["q"] = q
   }
 
   if (sortBy === "created_at") {
@@ -72,6 +82,10 @@ export default async function PaginatedProducts({
   })
 
   const totalPages = Math.ceil(count / PRODUCT_LIMIT)
+
+  if (!products.length && emptyState) {
+    return <>{emptyState}</>
+  }
 
   return (
     <>
