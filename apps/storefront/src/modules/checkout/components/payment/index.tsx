@@ -1,11 +1,12 @@
 "use client"
 import { RadioGroup } from "@headlessui/react"
-import { isMono, isMonoPrepayment, isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isCod, isMono, isMonoPrepayment, isStripeLike, paymentInfoMap } from "@lib/constants"
 import { initiatePaymentSession } from "@lib/data/cart"
 import { isMonoSessionStillPayable } from "@lib/data/mono"
 import { fetchPrepaymentSettings } from "@lib/data/checkout-options"
 import { convertToLocale } from "@lib/util/money"
-import { CheckCircleSolid, CreditCard, PencilSquareSolid } from "@medusajs/icons"
+// PAYMENT LOGO: restore `CreditCard` here with the payment logo block below.
+import { CheckCircleSolid, PencilSquareSolid } from "@medusajs/icons"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import PaymentContainer, {
   StripeCardContainer,
@@ -146,6 +147,25 @@ const Payment = ({
       cancelled = true
     }
   }, [selectedPaymentMethod])
+
+  const formatCartAmount = (amount: number) =>
+    convertToLocale({ amount, currency_code: cart.currency_code })
+  const summaryProviderId = activeSession?.provider_id
+  const paymentDetailsSummary = isStripeLike(summaryProviderId)
+    ? cardBrand || "Оплата карткою"
+    : isMonoPrepayment(summaryProviderId)
+    ? prepaymentAmount !== null
+      ? `Передоплата ${formatCartAmount(
+          prepaymentAmount
+        )} онлайн, решта ${formatCartAmount(
+          Math.max((cart.total ?? 0) - prepaymentAmount, 0)
+        )} — при отриманні`
+      : "Передоплата онлайн, решта — при отриманні"
+    : isMono(summaryProviderId)
+    ? "Після підтвердження замовлення відкриється сторінка оплати"
+    : isCod(summaryProviderId)
+    ? `Оплата ${formatCartAmount(cart.total ?? 0)} при отриманні замовлення`
+    : null
 
   return (
     <div className="bg-ivory">
@@ -304,26 +324,28 @@ const Payment = ({
                     activeSession?.provider_id}
                 </Text>
               </div>
-              <div className="flex flex-col w-full md:w-1/3">
+              {paymentDetailsSummary && (
+              <div className="flex flex-col w-full md:w-2/3">
                 <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                  Платіжні реквізити
+                  Деталі оплати
                 </Text>
                 <div
                   className="flex gap-2 txt-medium text-ui-fg-subtle items-center"
                   data-testid="payment-details-summary"
                 >
+                  {/* PAYMENT LOGO: provider logos (Plata by mono, card icon) are
+                      hidden for now. Restore this block, together with the
+                      `CreditCard` import above, to show them again.
                   <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
                     {paymentInfoMap[selectedPaymentMethod]?.icon || (
                       <CreditCard />
                     )}
                   </Container>
-                  <Text>
-                    {isStripeLike(selectedPaymentMethod) && cardBrand
-                      ? cardBrand
-                      : "З'явиться ще один крок"}
-                  </Text>
+                  */}
+                  <Text>{paymentDetailsSummary}</Text>
                 </div>
               </div>
+              )}
             </div>
           ) : paidByGiftcard ? (
             <div className="flex flex-col w-full md:w-1/3">

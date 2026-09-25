@@ -1,6 +1,7 @@
-import { Container, Heading, Text } from "@modules/common/components/ui"
+// PAYMENT LOGO: restore `Container` here with the payment logo block below.
+import { Heading, Text } from "@modules/common/components/ui"
 
-import { isMono, isStripeLike, paymentInfoMap } from "@lib/constants"
+import { isCod, isMono, isStripeLike, paymentInfoMap } from "@lib/constants"
 import Divider from "@modules/common/components/divider"
 import { convertToLocale } from "@lib/util/money"
 import { HttpTypes } from "@medusajs/types"
@@ -27,6 +28,27 @@ const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })
+
+  const paidAt = payment?.created_at
+    ? new Date(payment.created_at).toLocaleString("uk-UA", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : ""
+
+  const paymentStatus = !payment
+    ? ""
+    : isStripeLike(payment.provider_id) && payment.data?.card_last4
+    ? `**** **** **** ${payment.data.card_last4}`
+    : isFullyCaptured
+    ? `Сплачено ${formatMoney(captured)} · ${paidAt}`
+    : isPartiallyCaptured
+    ? `Передоплату ${formatMoney(captured)} сплачено · ${paidAt}`
+    : isCod(payment.provider_id)
+    ? `Оплата ${formatMoney(total)} при отриманні замовлення`
+    : isMono(payment.provider_id)
+    ? "Очікуємо підтвердження оплати від Plata by mono"
+    : `Очікує оплати — ${formatMoney(total)}`
 
   const fiscalCheck =
     payment && isMono(payment.provider_id)
@@ -61,31 +83,16 @@ const PaymentDetails = async ({ order }: PaymentDetailsProps) => {
             </div>
             <div className="flex flex-col w-2/3 max-[520px]:w-full">
               <Text className="txt-medium-plus text-ui-fg-base mb-1">
-                Платіжні реквізити
+                Статус оплати
               </Text>
               <div className="flex gap-2 txt-medium text-ui-fg-subtle items-center max-[520px]:flex-col max-[520px]:items-start">
+                {/* PAYMENT LOGO: provider logos (Plata by mono, card icon) are
+                    hidden for now. Restore this block to show them again.
                 <Container className="flex items-center h-7 w-fit p-2 bg-ui-button-neutral-hover">
                   {paymentInfoMap[payment.provider_id].icon}
                 </Container>
-                <Text data-testid="payment-amount">
-                  {isStripeLike(payment.provider_id) && payment.data?.card_last4
-                    ? `**** **** **** ${payment.data.card_last4}`
-                    : isFullyCaptured
-                    ? `${convertToLocale({
-                        amount: captured,
-                        currency_code: order.currency_code,
-                      })} сплачено о ${new Date(
-                        payment.created_at ?? ""
-                      ).toLocaleString()}`
-                    : isPartiallyCaptured
-                    ? `Передоплата ${formatMoney(captured)} сплачена о ${new Date(
-                        payment.created_at ?? ""
-                      ).toLocaleString()}`
-                    : `Очікує оплати — до сплати ${convertToLocale({
-                        amount: total,
-                        currency_code: order.currency_code,
-                      })}`}
-                </Text>
+                */}
+                <Text data-testid="payment-amount">{paymentStatus}</Text>
                 {isPartiallyCaptured && (
                   <Text className="text-ui-fg-subtle" data-testid="payment-outstanding">
                     Доплата при отриманні:{" "}

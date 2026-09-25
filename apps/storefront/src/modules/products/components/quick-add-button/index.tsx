@@ -6,6 +6,7 @@ import { useToast } from "@modules/common/components/toast"
 import { HttpTypes } from "@medusajs/types"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import { isProductFullyOutOfStock, isVariantInStock } from "@lib/util/product"
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 type Props = {
@@ -22,6 +23,7 @@ type Props = {
  */
 export default function QuickAddButton({ product, className }: Props) {
   const { showToast } = useToast()
+  const router = useRouter()
   const countryCode = COUNTRY_CODE
   const [isAdding, setIsAdding] = useState(false)
 
@@ -64,9 +66,10 @@ export default function QuickAddButton({ product, className }: Props) {
         showToast("Товар додано до кошика", { description: product.title })
       } catch {
         showToast("Не вдалося додати товар", {
-          description: "Спробуйте ще раз трохи пізніше.",
+          description: "Можливо, товару вже немає в потрібній кількості.",
           variant: "error",
         })
+        router.refresh()
       } finally {
         setIsAdding(false)
       }

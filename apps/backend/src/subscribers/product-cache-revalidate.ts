@@ -39,5 +39,12 @@ export const config: SubscriberConfig = {
     "inventory.inventory-level.updated",
     "inventory.inventory-level.created",
     "inventory.inventory-level.deleted",
+    // Reservations — placing an order doesn't touch stocked_quantity, it
+    // reserves stock, which lowers the available quantity the storefront
+    // shows. Without these, a product that just sold out keeps its cached
+    // "Add to cart" button.
+    "inventory.reservation-item.created",
+    "inventory.reservation-item.updated",
+    "inventory.reservation-item.deleted",
   ],
 }

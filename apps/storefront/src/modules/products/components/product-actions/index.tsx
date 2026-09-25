@@ -135,11 +135,15 @@ export default function ProductActions({
         countryCode,
       })
       showToast("Товар додано до кошика", { description: product.title })
-    } catch (error) {
+    } catch {
+      // Most often the stock ran out after the page was loaded. Refresh so
+      // the button reflects current availability. The real error text isn't
+      // shown: Next.js hides server action error messages in production.
       showToast("Не вдалося додати товар", {
-        description: "Спробуйте ще раз трохи пізніше.",
+        description: "Можливо, товару вже немає в потрібній кількості.",
         variant: "error",
       })
+      router.refresh()
     }
 
     setIsAdding(false)

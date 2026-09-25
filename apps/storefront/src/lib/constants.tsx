@@ -39,7 +39,7 @@ export const paymentInfoMap: Record<
     icon: <PayPal />,
   },
   pp_mono_mono: {
-    title: "Оплата зараз (Plata by mono)",
+    title: "Оплата зараз",
     icon: <Mono />,
   },
   "pp_mono-prepayment_mono-prepayment": {

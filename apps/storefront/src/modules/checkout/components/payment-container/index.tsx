@@ -53,9 +53,12 @@ const PaymentContainer: React.FC<PaymentContainerProps> = ({
             <PaymentTest className="hidden small:block" />
           )}
         </div>
+        {/* PAYMENT LOGO: provider logos (Plata by mono, card icon) are hidden
+            for now. Restore this block to show them again.
         <span className="justify-self-end text-ui-fg-base flex-shrink-0">
           {paymentInfoMap[paymentProviderId]?.icon}
         </span>
+        */}
       </div>
       {isManual(paymentProviderId) && isDevelopment && (
         <PaymentTest className="small:hidden text-[10px]" />
