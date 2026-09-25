@@ -8,7 +8,12 @@ import { Button } from "@modules/common/components/ui"
 import Divider from "@modules/common/components/divider"
 import { useToast } from "@modules/common/components/toast"
 import OptionSelect from "@modules/products/components/product-actions/option-select"
-import { isVariantInStock, isDefaultOption, optionsAsKeymap } from "@lib/util/product"
+import {
+  getDefaultVariant,
+  isVariantInStock,
+  isDefaultOption,
+  optionsAsKeymap,
+} from "@lib/util/product"
 import NotifyMeModal from "@modules/products/components/notify-me-modal"
 import { isEqual } from "lodash"
 import { usePathname, useSearchParams } from "next/navigation"
@@ -34,27 +39,26 @@ export default function ProductActions({
   const searchParams = useSearchParams()
   const { showToast } = useToast()
 
-  const [options, setOptions] = useState<Record<string, string | undefined>>({})
+  const getInitialOptions = () => {
+    const initialVariant =
+      (initialVariantId &&
+        product.variants?.find((v) => v.id === initialVariantId)) ||
+      getDefaultVariant(product)
+
+    return (initialVariant && optionsAsKeymap(initialVariant.options)) ?? {}
+  }
+
+  const [options, setOptions] =
+    useState<Record<string, string | undefined>>(getInitialOptions)
+  const [optionsProductId, setOptionsProductId] = useState(product.id)
   const [isAdding, setIsAdding] = useState(false)
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
   const countryCode = COUNTRY_CODE
 
-  useEffect(() => {
-    if (initialVariantId) {
-      const initialVariant = product.variants?.find(
-        (v) => v.id === initialVariantId
-      )
-      if (initialVariant) {
-        setOptions(optionsAsKeymap(initialVariant.options) ?? {})
-        return
-      }
-    }
-
-    if (product.variants?.length === 1) {
-      const variantOptions = optionsAsKeymap(product.variants[0].options)
-      setOptions(variantOptions ?? {})
-    }
-  }, [product.variants, initialVariantId])
+  if (optionsProductId !== product.id) {
+    setOptionsProductId(product.id)
+    setOptions(getInitialOptions())
+  }
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {

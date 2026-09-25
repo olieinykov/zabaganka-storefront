@@ -43,23 +43,11 @@ export default async function Footer({
               Про нас
             </LocalizedClientLink>
             <LocalizedClientLink
-              href="/shipping"
+              href="/faq"
               className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
             >
-              Доставка та оплата
+              Часті питання
             </LocalizedClientLink>
-            <LocalizedClientLink
-              href="/returns"
-              className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
-            >
-              Обмін та повернення
-            </LocalizedClientLink>
-            <LocalizedClientLink
-              href="/contacts"
-              className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
-            >
-            Контакти
-          </LocalizedClientLink>
           </FooterColumn>
 
           <FooterColumn title="Ми в мережі">
@@ -79,12 +67,6 @@ export default async function Footer({
             >
               Telegram
             </a>
-            <LocalizedClientLink
-              href="/privacy"
-              className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
-            >
-              Політика конфіденційності
-            </LocalizedClientLink>
           </FooterColumn>
         </div>
       </div>

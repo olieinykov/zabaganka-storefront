@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { COUNTRY_CODE } from "@lib/constants"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
+import { getDefaultVariant } from "@lib/util/product"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
@@ -85,8 +86,6 @@ export default async function ProductPage(props: Props) {
   const region = await getRegion(COUNTRY_CODE)
   const searchParams = await props.searchParams
 
-  const selectedVariantId = searchParams.v_id
-
   if (!region) {
     notFound()
   }
@@ -99,6 +98,12 @@ export default async function ProductPage(props: Props) {
   if (!pricedProduct) {
     notFound()
   }
+
+  const selectedVariantId =
+    (searchParams.v_id &&
+      pricedProduct.variants?.some((v) => v.id === searchParams.v_id) &&
+      searchParams.v_id) ||
+    getDefaultVariant(pricedProduct)?.id
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
 

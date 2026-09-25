@@ -63,6 +63,13 @@ export const isVariantInStock = (
   return (variant.inventory_quantity || 0) > 0
 }
 
+export const getDefaultVariant = (
+  product: Pick<HttpTypes.StoreProduct, "variants">
+): HttpTypes.StoreProductVariant | undefined => {
+  const variants = product.variants ?? []
+  return variants.find((variant) => isVariantInStock(variant)) ?? variants[0]
+}
+
 export const isProductInStock = (product: HttpTypes.StoreProduct): boolean => {
   if (!product.variants || product.variants.length === 0) {
     return true

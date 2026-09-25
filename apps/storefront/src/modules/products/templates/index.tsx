@@ -52,6 +52,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 disabled={true}
                 product={product}
                 region={region}
+                initialVariantId={selectedVariantId}
               />
             }
           >
