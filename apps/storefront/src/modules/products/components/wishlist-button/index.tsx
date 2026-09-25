@@ -1,20 +1,27 @@
 "use client"
 
 import Heart from "@modules/common/icons/heart"
-import { useState } from "react"
+import { useFavorites } from "@modules/favorites/context"
 
-/**
- * Purely visual wishlist toggle — there is no wishlist entity on the backend
- * (Medusa's default customer module doesn't include one), so this only
- * reflects local UI state. Wire this up to a real wishlist module/API route
- * if/when that feature is added on the backend.
- */
 export default function WishlistButton({
+  productId,
+  productTitle,
+  variant = "card",
   className,
 }: {
+  productId: string
+  productTitle?: string
+  /** "card" — round chip over a product image, "pdp" — square button next to "add to cart" */
+  variant?: "card" | "pdp"
   className?: string
 }) {
-  const [saved, setSaved] = useState(false)
+  const { isFavorite, toggleFavorite } = useFavorites()
+  const saved = isFavorite(productId)
+
+  const variantClassName =
+    variant === "pdp"
+      ? "h-10 w-10 shrink-0 rounded-rounded border border-line bg-white hover:border-navy"
+      : "h-8 w-8 rounded-full bg-white/90 shadow-sm hover:shadow-md"
 
   return (
     <button
@@ -24,14 +31,21 @@ export default function WishlistButton({
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        setSaved((v) => !v)
+        toggleFavorite(productId, productTitle)
       }}
       className={
-        "interactive interactive-lift inline-flex items-center justify-center h-8 w-8 rounded-full bg-white/90 shadow-sm hover:shadow-md " +
+        "interactive interactive-lift inline-flex items-center justify-center " +
+        variantClassName +
+        " " +
         (className || "")
       }
+      data-testid="wishlist-button"
     >
-      <Heart size={16} filled={saved} color={saved ? "#a4834f" : "#181817"} />
+      <Heart
+        size={variant === "pdp" ? 18 : 16}
+        filled={saved}
+        color={saved ? "#a4834f" : "#181817"}
+      />
     </button>
   )
 }

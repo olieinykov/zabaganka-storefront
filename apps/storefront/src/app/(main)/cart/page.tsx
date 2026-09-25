@@ -1,5 +1,6 @@
 import { retrieveCart } from "@lib/data/cart"
-import { retrieveCustomer } from "@lib/data/customer"
+// ACCOUNT FEATURE: customer retrieval, disabled while there is no account area.
+// import { retrieveCustomer } from "@lib/data/customer"
 import CartAvailabilityGuard from "@modules/cart/components/cart-availability-guard"
 import CartTemplate from "@modules/cart/templates"
 import { Metadata } from "next"
@@ -16,12 +17,13 @@ export default async function Cart() {
     return notFound()
   })
 
-  const customer = await retrieveCustomer()
+  // ACCOUNT FEATURE: restore and pass `customer` to CartTemplate below.
+  // const customer = await retrieveCustomer()
 
   return (
     <>
       <CartAvailabilityGuard />
-      <CartTemplate cart={cart} customer={customer} />
+      <CartTemplate cart={cart} customer={null} />
     </>
   )
 }

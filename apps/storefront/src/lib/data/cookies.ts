@@ -1,5 +1,6 @@
 import "server-only"
 import { cookies as nextCookies } from "next/headers"
+import { FAVORITES_COOKIE_NAME, parseFavoriteIds } from "@lib/util/favorites"
 
 export const getAuthHeaders = async (): Promise<
   { authorization: string } | Record<string, never>
@@ -128,6 +129,15 @@ export const setCartId = async (cartId: string) => {
     sameSite: "strict",
     secure: process.env.NODE_ENV === "production",
   })
+}
+
+export const getFavoriteIds = async (): Promise<string[]> => {
+  try {
+    const cookies = await nextCookies()
+    return parseFavoriteIds(cookies.get(FAVORITES_COOKIE_NAME)?.value)
+  } catch {
+    return []
+  }
 }
 
 export const removeCartId = async () => {

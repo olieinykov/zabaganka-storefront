@@ -15,6 +15,7 @@ import {
   optionsAsKeymap,
 } from "@lib/util/product"
 import NotifyMeModal from "@modules/products/components/notify-me-modal"
+import WishlistButton from "@modules/products/components/wishlist-button"
 import { isEqual } from "lodash"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -206,36 +207,43 @@ export default function ProductActions({
 
         <ProductPrice product={product} variant={selectedVariant} />
 
-        {selectedVariant && isValidVariant && !inStock ? (
-          <Button
-            type="button"
-            onClick={() => setIsNotifyModalOpen(true)}
-            variant="secondary"
-            className="w-full h-10"
-            data-testid="notify-me-button"
-          >
-            Повідомити, коли з'явиться
-          </Button>
-        ) : (
-          <Button
-            onClick={handleAddToCart}
-            disabled={
-              !inStock ||
-              !selectedVariant ||
-              !!disabled ||
-              isAdding ||
-              !isValidVariant
-            }
-            variant="primary"
-            className="w-full h-10"
-            isLoading={isAdding}
-            data-testid="add-product-button"
-          >
-            {!selectedVariant || !isValidVariant
-              ? "Оберіть варіант товару"
-              : "Додати до кошика"}
-          </Button>
-        )}
+        <div className="flex items-center gap-x-2">
+          {selectedVariant && isValidVariant && !inStock ? (
+            <Button
+              type="button"
+              onClick={() => setIsNotifyModalOpen(true)}
+              variant="secondary"
+              className="flex-1 h-10"
+              data-testid="notify-me-button"
+            >
+              Повідомити, коли з'явиться
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAddToCart}
+              disabled={
+                !inStock ||
+                !selectedVariant ||
+                !!disabled ||
+                isAdding ||
+                !isValidVariant
+              }
+              variant="primary"
+              className="flex-1 h-10"
+              isLoading={isAdding}
+              data-testid="add-product-button"
+            >
+              {!selectedVariant || !isValidVariant
+                ? "Оберіть варіант товару"
+                : "Додати до кошика"}
+            </Button>
+          )}
+          <WishlistButton
+            productId={product.id}
+            productTitle={product.title}
+            variant="pdp"
+          />
+        </div>
         <NotifyMeModal
           productId={product.id}
           variantId={selectedVariant?.id}

@@ -4,11 +4,13 @@ import { listCategories } from "@lib/data/categories"
 import { HttpTypes } from "@medusajs/types"
 import AnnouncementBar from "@modules/layout/components/announcement-bar"
 import CartButton from "@modules/layout/components/cart-button"
+import FavoritesButton from "@modules/layout/components/favorites-button"
 import Logo from "@modules/layout/components/logo"
 import MobileMenuTrigger, {
   NavLink,
 } from "@modules/layout/components/mobile-menu"
-import Heart from "@modules/common/icons/heart"
+// ACCOUNT FEATURE: used by the commented-out account link below.
+// import Heart from "@modules/common/icons/heart"
 import Search from "@modules/common/icons/search"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 
@@ -52,6 +54,9 @@ export default async function Nav({
               >
                 <Search size={19} />
               </button>
+              {/* ACCOUNT FEATURE: link to the customer account, disabled until
+                  the account area is brought back. Restore together with the
+                  `Heart` import above.
               <LocalizedClientLink
                 href="/account"
                 aria-label="Обране"
@@ -60,6 +65,8 @@ export default async function Nav({
               >
                 <Heart size={19} />
               </LocalizedClientLink>
+              */}
+              <FavoritesButton />
               <Suspense
                 fallback={
                   <LocalizedClientLink

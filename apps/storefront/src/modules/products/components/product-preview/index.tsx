@@ -50,7 +50,11 @@ export default async function ProductPreview({
             </span>
           )
         )}
-        <WishlistButton className="absolute top-3 right-3" />
+        <WishlistButton
+          productId={product.id}
+          productTitle={product.title}
+          className="absolute top-3 right-3"
+        />
       </LocalizedClientLink>
 
       <div className="flex flex-col gap-1 mt-3 flex-1">
