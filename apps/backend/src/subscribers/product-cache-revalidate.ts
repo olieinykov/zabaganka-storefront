@@ -1,5 +1,6 @@
 import type { SubscriberConfig } from "@medusajs/framework"
 import { notifyStorefrontRevalidate } from "../lib/notify-storefront-revalidate"
+import { PRODUCT_VIDEOS_CHANGED_EVENT } from "../lib/product-video"
 
 
 export default async function productCacheRevalidateHandler() {
@@ -24,6 +25,8 @@ export const config: SubscriberConfig = {
     "product.product-image.updated",
     "product.product-image.created",
     "product.product-image.deleted",
+    // Product videos (product-media module), emitted by our own workflows
+    PRODUCT_VIDEOS_CHANGED_EVENT,
     // Category/collection attachment can change what shows up on
     // category/collection listing pages
     "product.product-category.updated",

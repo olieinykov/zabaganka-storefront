@@ -9,6 +9,7 @@ import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
+import { ProductMediaItem } from "@lib/util/product-videos"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
 
@@ -16,7 +17,7 @@ type ProductTemplateProps = {
   product: HttpTypes.StoreProduct
   region: HttpTypes.StoreRegion
   countryCode: string
-  images: HttpTypes.StoreProductImage[]
+  media: ProductMediaItem[]
   selectedVariantId?: string
 }
 
@@ -24,7 +25,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   product,
   region,
   countryCode,
-  images,
+  media,
   selectedVariantId,
 }) => {
   if (!product || !product.id) {
@@ -42,7 +43,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
           <ProductTabs product={product} />
         </div>
         <div className="block w-full relative">
-          <ImageGallery images={images} />
+          <ImageGallery media={media} />
         </div>
         <div className="flex flex-col small:sticky small:top-48 small:py-0 small:max-w-[300px] w-full py-8 gap-y-12">
           <ProductOnboardingCta />

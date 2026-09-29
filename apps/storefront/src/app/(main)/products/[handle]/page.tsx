@@ -1,9 +1,14 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
-import { COUNTRY_CODE } from "@lib/constants"
+import { COUNTRY_CODE, PRODUCT_DEFAULT_FIELDS } from "@lib/constants"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { getDefaultVariant } from "@lib/util/product"
+import {
+  getProductVideos,
+  mergeProductMedia,
+  PRODUCT_VIDEO_FIELDS,
+} from "@lib/util/product-videos"
 import ProductTemplate from "@modules/products/templates"
 import { HttpTypes } from "@medusajs/types"
 
@@ -92,7 +97,10 @@ export default async function ProductPage(props: Props) {
 
   const pricedProduct = await listProducts({
     countryCode: COUNTRY_CODE,
-    queryParams: { handle: params.handle },
+    queryParams: {
+      handle: params.handle,
+      fields: `${PRODUCT_DEFAULT_FIELDS},${PRODUCT_VIDEO_FIELDS}`,
+    },
   }).then(({ response }) => response.products[0])
 
   if (!pricedProduct) {
@@ -106,13 +114,18 @@ export default async function ProductPage(props: Props) {
     getDefaultVariant(pricedProduct)?.id
 
   const images = getImagesForVariant(pricedProduct, selectedVariantId)
+  const media = mergeProductMedia(
+    pricedProduct.images ?? [],
+    getProductVideos(pricedProduct),
+    new Set((images ?? []).map((image) => image.id))
+  )
 
   return (
     <ProductTemplate
       product={pricedProduct}
       region={region}
       countryCode={COUNTRY_CODE}
-      images={images ?? []}
+      media={media}
       selectedVariantId={selectedVariantId}
     />
   )

@@ -1,14 +1,15 @@
 "use client"
 
-import { HttpTypes } from "@medusajs/types"
+import { ProductMediaItem } from "@lib/util/product-videos"
 import { Container, clx } from "@modules/common/components/ui"
 import ChevronLeft from "@modules/common/icons/chevron-left"
 import ChevronRight from "@modules/common/icons/chevron-right"
+import VideoPlayer from "@modules/products/components/video-player"
 import Image from "next/image"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 type ImageGalleryProps = {
-  images: HttpTypes.StoreProductImage[]
+  media: ProductMediaItem[]
 }
 
 const MAX_VISIBLE_DOTS = 7
@@ -28,16 +29,22 @@ function getDotSizeClass(distanceFromActive: number): string {
   return "w-[3px] h-[3px] bg-graphite/15"
 }
 
-const ImageGallery = ({ images }: ImageGalleryProps) => {
+const ImageGallery = ({ media: slides }: ImageGalleryProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const [activeIndex, setActiveIndex] = useState(0)
-  const isMultiple = images.length > 1
+
+  const typeNumbers = useMemo(() => {
+    const counters = { image: 0, video: 0 }
+    return slides.map((slide) => ++counters[slide.type])
+  }, [slides])
+
+  const isMultiple = slides.length > 1
 
   const scrollToIndex = useCallback((index: number) => {
     const track = trackRef.current
     if (!track) return
 
-    const wrapped = ((index % images.length) + images.length) % images.length
+    const wrapped = ((index % slides.length) + slides.length) % slides.length
     const slide = track.children[wrapped] as HTMLElement | undefined
     if (!slide) return
 
@@ -45,7 +52,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
       left: slide.offsetLeft,
       behavior: "smooth",
     })
-  }, [images.length])
+  }, [slides.length])
 
   useEffect(() => {
     const track = trackRef.current
@@ -76,17 +83,17 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
     }
   }, [isMultiple])
 
-  if (!images.length) {
+  if (!slides.length) {
     return null
   }
 
   const windowStart = Math.max(
     0,
-    Math.min(activeIndex - DOT_WINDOW_HALF, images.length - MAX_VISIBLE_DOTS)
+    Math.min(activeIndex - DOT_WINDOW_HALF, slides.length - MAX_VISIBLE_DOTS)
   )
-  const visibleDots = images
+  const visibleDots = slides
     .slice(windowStart, windowStart + MAX_VISIBLE_DOTS)
-    .map((image, i) => ({ image, index: windowStart + i }))
+    .map((slide, i) => ({ slide, index: windowStart + i }))
 
   return (
     <div className="relative flex items-start group small:mx-16">
@@ -97,26 +104,34 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
           isMultiple && "snap-x snap-mandatory"
         )}
       >
-        {images.map((image, index) => (
+        {slides.map((slide, index) => (
           <Container
-            key={image.id}
+            key={slide.id}
             className={clx(
               "relative aspect-[29/34] w-full shrink-0 overflow-hidden bg-ui-bg-subtle p-0",
               isMultiple && "snap-start snap-always"
             )}
-            id={image.id}
+            id={slide.id}
           >
-            {!!image.url && (
+            {slide.type === "image" ? (
               <Image
-                src={image.url}
+                src={slide.url}
                 priority={index === 0}
                 className="absolute inset-0 rounded-rounded"
-                alt={`Зображення товару ${index + 1}`}
+                alt={`Зображення товару ${typeNumbers[index]}`}
                 fill
                 sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
                 style={{
                   objectFit: "cover",
                 }}
+              />
+            ) : (
+              <VideoPlayer
+                src={slide.url}
+                label={`Відео товару ${typeNumbers[index]}`}
+                isActive={index === activeIndex}
+                hasPagination={isMultiple}
+                className="rounded-rounded"
               />
             )}
           </Container>
@@ -143,11 +158,15 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
           </button>
 
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-circle bg-ivory/90 border border-line shadow-sm px-2.5 py-1.5">
-            {visibleDots.map(({ image, index }) => (
+            {visibleDots.map(({ slide, index }) => (
               <button
-                key={image.id}
+                key={slide.id}
                 type="button"
-                aria-label={`Перейти до зображення ${index + 1}`}
+                aria-label={
+                  slide.type === "video"
+                    ? `Перейти до відео ${typeNumbers[index]}`
+                    : `Перейти до зображення ${typeNumbers[index]}`
+                }
                 aria-current={index === activeIndex}
                 onClick={() => scrollToIndex(index)}
                 className={clx(

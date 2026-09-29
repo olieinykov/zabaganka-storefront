@@ -115,5 +115,9 @@ export const noDivisionCurrencies = [
   "xau",
 ]
 
+/** Fields `listProducts` requests when the caller doesn't pass its own. */
+export const PRODUCT_DEFAULT_FIELDS =
+  "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*variants.options,+metadata,+tags,";
+
 export const PRODUCT_PREVIEW_FIELDS =
   "id,title,handle,thumbnail,*images,*categories,+variants.id,*variants.calculated_price,+variants.inventory_quantity,+variants.manage_inventory,+variants.allow_backorder";

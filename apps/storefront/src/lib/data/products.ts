@@ -8,7 +8,11 @@ import { HttpTypes } from "@medusajs/types"
 import { SortOptions } from "@modules/store/components/refinement-list/sort-products"
 import { getAuthHeaders, getPublicCacheOptions } from "./cookies"
 import { getRegion, retrieveRegion } from "./regions"
-import { COUNTRY_CODE, PRODUCT_PREVIEW_FIELDS } from "@lib/constants"
+import {
+  COUNTRY_CODE,
+  PRODUCT_DEFAULT_FIELDS,
+  PRODUCT_PREVIEW_FIELDS,
+} from "@lib/constants"
 import { getProductPrice } from "@lib/util/get-product-price"
 import { productMatchesSearch, tokenizeSearchQuery } from "@lib/util/search"
 
@@ -75,8 +79,7 @@ export const listProducts = async ({
           limit,
           offset,
           region_id: region?.id,
-          fields:
-            "*variants.calculated_price,+variants.inventory_quantity,*variants.images,*variants.options,+metadata,+tags,",
+          fields: PRODUCT_DEFAULT_FIELDS,
           ...queryParams,
         },
         headers,
