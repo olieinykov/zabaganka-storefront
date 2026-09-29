@@ -1,5 +1,6 @@
 "use client"
 
+import { withFirstFrameHint } from "@lib/util/product-videos"
 import { clx } from "@modules/common/components/ui"
 import Spinner from "@modules/common/icons/spinner"
 import {
@@ -52,10 +53,6 @@ function formatTime(seconds: number): string {
   const minutes = Math.floor(total / 60)
   const rest = total % 60
   return `${minutes}:${rest.toString().padStart(2, "0")}`
-}
-
-function withFirstFrameHint(src: string): string {
-  return src.includes("#") ? src : `${src}#t=0.001`
 }
 
 function getVideoDuration(video: HTMLVideoElement): number {

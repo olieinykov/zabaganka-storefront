@@ -29,6 +29,10 @@ export function getProductVideos(
     .sort((a, b) => a.rank - b.rank)
 }
 
+export function withFirstFrameHint(src: string): string {
+  return src.includes("#") ? src : `${src}#t=0.001`
+}
+
 export function mergeProductMedia(
   images: HttpTypes.StoreProductImage[],
   videos: ProductVideo[],

@@ -5,6 +5,7 @@ import { Container, clx } from "@modules/common/components/ui"
 import ChevronLeft from "@modules/common/icons/chevron-left"
 import ChevronRight from "@modules/common/icons/chevron-right"
 import VideoPlayer from "@modules/products/components/video-player"
+import ThumbnailRail from "./thumbnail-rail"
 import Image from "next/image"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
@@ -96,87 +97,104 @@ const ImageGallery = ({ media: slides }: ImageGalleryProps) => {
     .map((slide, i) => ({ slide, index: windowStart + i }))
 
   return (
-    <div className="relative flex items-start group small:mx-16">
+    <div className="relative small:mx-16">
       <div
-        ref={trackRef}
         className={clx(
-          "flex w-full overflow-x-auto no-scrollbar scroll-smooth",
-          isMultiple && "snap-x snap-mandatory"
+          "relative flex items-start group",
+          isMultiple && "small:mr-[92px]"
         )}
       >
-        {slides.map((slide, index) => (
-          <Container
-            key={slide.id}
-            className={clx(
-              "relative aspect-[29/34] w-full shrink-0 overflow-hidden bg-ui-bg-subtle p-0",
-              isMultiple && "snap-start snap-always"
-            )}
-            id={slide.id}
-          >
-            {slide.type === "image" ? (
-              <Image
-                src={slide.url}
-                priority={index === 0}
-                className="absolute inset-0 rounded-rounded"
-                alt={`Зображення товару ${typeNumbers[index]}`}
-                fill
-                sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
-                style={{
-                  objectFit: "cover",
-                }}
-              />
-            ) : (
-              <VideoPlayer
-                src={slide.url}
-                label={`Відео товару ${typeNumbers[index]}`}
-                isActive={index === activeIndex}
-                hasPagination={isMultiple}
-                className="rounded-rounded"
-              />
-            )}
-          </Container>
-        ))}
+        <div
+          ref={trackRef}
+          className={clx(
+            "flex w-full overflow-x-auto no-scrollbar scroll-smooth",
+            isMultiple && "snap-x snap-mandatory"
+          )}
+        >
+          {slides.map((slide, index) => (
+            <Container
+              key={slide.id}
+              className={clx(
+                "relative aspect-[29/34] w-full shrink-0 overflow-hidden bg-ui-bg-subtle p-0",
+                isMultiple && "snap-start snap-always"
+              )}
+              id={slide.id}
+            >
+              {slide.type === "image" ? (
+                <Image
+                  src={slide.url}
+                  priority={index === 0}
+                  className="absolute inset-0 rounded-rounded"
+                  alt={`Зображення товару ${typeNumbers[index]}`}
+                  fill
+                  sizes="(max-width: 576px) 280px, (max-width: 768px) 360px, (max-width: 992px) 480px, 800px"
+                  style={{
+                    objectFit: "cover",
+                  }}
+                />
+              ) : (
+                <VideoPlayer
+                  src={slide.url}
+                  label={`Відео товару ${typeNumbers[index]}`}
+                  isActive={index === activeIndex}
+                  hasPagination={isMultiple}
+                  className="rounded-rounded"
+                />
+              )}
+            </Container>
+          ))}
+        </div>
+
+        {isMultiple && (
+          <>
+            <button
+              type="button"
+              aria-label="Попереднє зображення"
+              onClick={() => scrollToIndex(activeIndex - 1)}
+              className="hidden small:flex items-center justify-center absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-circle bg-ivory/90 border border-line text-ink shadow-sm interactive opacity-0 group-hover:opacity-100 hover:bg-milk focus-visible:opacity-100"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              aria-label="Наступне зображення"
+              onClick={() => scrollToIndex(activeIndex + 1)}
+              className="hidden small:flex items-center justify-center absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-circle bg-ivory/90 border border-line text-ink shadow-sm interactive opacity-0 group-hover:opacity-100 hover:bg-milk focus-visible:opacity-100"
+            >
+              <ChevronRight size={18} />
+            </button>
+
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-circle bg-ivory/90 border border-line shadow-sm px-2.5 py-1.5">
+              {visibleDots.map(({ slide, index }) => (
+                <button
+                  key={slide.id}
+                  type="button"
+                  aria-label={
+                    slide.type === "video"
+                      ? `Перейти до відео ${typeNumbers[index]}`
+                      : `Перейти до зображення ${typeNumbers[index]}`
+                  }
+                  aria-current={index === activeIndex}
+                  onClick={() => scrollToIndex(index)}
+                  className={clx(
+                    "shrink-0 rounded-circle transition-all duration-300",
+                    getDotSizeClass(Math.abs(index - activeIndex))
+                  )}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {isMultiple && (
-        <>
-          <button
-            type="button"
-            aria-label="Попереднє зображення"
-            onClick={() => scrollToIndex(activeIndex - 1)}
-            className="hidden small:flex items-center justify-center absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-circle bg-ivory/90 border border-line text-ink shadow-sm interactive opacity-0 group-hover:opacity-100 hover:bg-milk focus-visible:opacity-100"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            type="button"
-            aria-label="Наступне зображення"
-            onClick={() => scrollToIndex(activeIndex + 1)}
-            className="hidden small:flex items-center justify-center absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-circle bg-ivory/90 border border-line text-ink shadow-sm interactive opacity-0 group-hover:opacity-100 hover:bg-milk focus-visible:opacity-100"
-          >
-            <ChevronRight size={18} />
-          </button>
-
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 rounded-circle bg-ivory/90 border border-line shadow-sm px-2.5 py-1.5">
-            {visibleDots.map(({ slide, index }) => (
-              <button
-                key={slide.id}
-                type="button"
-                aria-label={
-                  slide.type === "video"
-                    ? `Перейти до відео ${typeNumbers[index]}`
-                    : `Перейти до зображення ${typeNumbers[index]}`
-                }
-                aria-current={index === activeIndex}
-                onClick={() => scrollToIndex(index)}
-                className={clx(
-                  "shrink-0 rounded-circle transition-all duration-300",
-                  getDotSizeClass(Math.abs(index - activeIndex))
-                )}
-              />
-            ))}
-          </div>
-        </>
+        <ThumbnailRail
+          slides={slides}
+          typeNumbers={typeNumbers}
+          activeIndex={activeIndex}
+          onSelect={scrollToIndex}
+          className="absolute inset-y-0 right-0 hidden w-20 small:block"
+        />
       )}
     </div>
   )
