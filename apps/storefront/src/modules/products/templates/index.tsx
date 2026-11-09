@@ -9,6 +9,7 @@ import ProductInfo from "@modules/products/templates/product-info"
 import SkeletonRelatedProducts from "@modules/skeletons/templates/skeleton-related-products"
 import { notFound } from "next/navigation"
 import { HttpTypes } from "@medusajs/types"
+import { PackagingData } from "@lib/util/packaging"
 import { ProductMediaItem } from "@lib/util/product-videos"
 
 import ProductActionsWrapper from "./product-actions-wrapper"
@@ -19,6 +20,7 @@ type ProductTemplateProps = {
   countryCode: string
   media: ProductMediaItem[]
   selectedVariantId?: string
+  packaging: PackagingData
 }
 
 const ProductTemplate: React.FC<ProductTemplateProps> = ({
@@ -27,6 +29,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
   countryCode,
   media,
   selectedVariantId,
+  packaging,
 }) => {
   if (!product || !product.id) {
     return notFound()
@@ -54,6 +57,8 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
                 product={product}
                 region={region}
                 initialVariantId={selectedVariantId}
+                packagingOptions={packaging.byProduct[product.id] ?? []}
+                defaultPackaging={packaging.defaultPackaging}
               />
             }
           >
@@ -61,6 +66,7 @@ const ProductTemplate: React.FC<ProductTemplateProps> = ({
               id={product.id}
               region={region}
               initialVariantId={selectedVariantId}
+              packaging={packaging}
             />
           </Suspense>
         </div>

@@ -22,6 +22,7 @@ type MobileActionsProps = {
   show: boolean
   optionsDisabled: boolean
   onNotifyMe?: () => void
+  totalPrice?: string
 }
 
 const MobileActions: React.FC<MobileActionsProps> = ({
@@ -35,6 +36,7 @@ const MobileActions: React.FC<MobileActionsProps> = ({
   show,
   optionsDisabled,
   onNotifyMe,
+  totalPrice,
 }) => {
   const { state, open, close } = useToggleState()
 
@@ -78,7 +80,9 @@ const MobileActions: React.FC<MobileActionsProps> = ({
             <div className="flex items-center gap-x-2">
               <span data-testid="mobile-title">{product.title}</span>
               <span>—</span>
-              {selectedPrice ? (
+              {totalPrice ? (
+                <span className="text-ui-fg-base">{totalPrice}</span>
+              ) : selectedPrice ? (
                 <div className="flex items-end gap-x-2 text-ui-fg-base">
                   {selectedPrice.price_type === "sale" && (
                     <p>

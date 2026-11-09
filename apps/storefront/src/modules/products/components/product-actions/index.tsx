@@ -20,6 +20,16 @@ import { isEqual } from "lodash"
 import { usePathname, useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 import ProductPrice from "../product-price"
+import PackagingPicker from "../packaging-picker"
+import { getProductPrice } from "@lib/util/get-product-price"
+import { convertToLocale } from "@lib/util/money"
+import {
+  addAmounts,
+  DEFAULT_PACKAGING,
+  DefaultPackaging,
+  formatDimensions,
+  PackagingOption,
+} from "@lib/util/packaging"
 import MobileActions from "./mobile-actions"
 import { useRouter } from "next/navigation"
 
@@ -28,12 +38,19 @@ type ProductActionsProps = {
   region: HttpTypes.StoreRegion
   disabled?: boolean
   initialVariantId?: string
+  /** Paid packaging options offered for this product (fresh from the API). */
+  packagingOptions?: PackagingOption[]
+  /** The free branded packaging (photo, name) shown as the default. */
+  defaultPackaging?: DefaultPackaging
 }
 
 export default function ProductActions({
   product,
+  region,
   disabled,
   initialVariantId,
+  packagingOptions = [],
+  defaultPackaging = DEFAULT_PACKAGING,
 }: ProductActionsProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -54,12 +71,17 @@ export default function ProductActions({
   const [optionsProductId, setOptionsProductId] = useState(product.id)
   const [isAdding, setIsAdding] = useState(false)
   const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false)
+  const [packagingId, setPackagingId] = useState<string | null>(null)
   const countryCode = COUNTRY_CODE
 
   if (optionsProductId !== product.id) {
     setOptionsProductId(product.id)
     setOptions(getInitialOptions())
+    setPackagingId(null)
   }
+
+  const selectedPackaging =
+    packagingOptions.find((option) => option.id === packagingId) ?? null
 
   const selectedVariant = useMemo(() => {
     if (!product.variants || product.variants.length === 0) {
@@ -119,6 +141,32 @@ export default function ProductActions({
     return isVariantInStock(selectedVariant)
   }, [selectedVariant])
 
+  const variantPrice = selectedVariant
+    ? getProductPrice({ product, variantId: selectedVariant.id }).variantPrice
+    : null
+  const currencyCode =
+    variantPrice?.currency_code ?? region?.currency_code ?? "uah"
+
+  const showPackaging = !!selectedVariant && !!isValidVariant && inStock
+
+  const packagingTotal =
+    showPackaging && selectedPackaging && variantPrice
+      ? {
+          jewelry: variantPrice.calculated_price,
+          packaging: convertToLocale({
+            amount: selectedPackaging.price,
+            currency_code: currencyCode,
+          }),
+          total: convertToLocale({
+            amount: addAmounts(
+              variantPrice.calculated_price_number,
+              selectedPackaging.price
+            ),
+            currency_code: currencyCode,
+          }),
+        }
+      : null
+
   const actionsRef = useRef<HTMLDivElement>(null)
 
   const inView = useIntersection(actionsRef, "0px")
@@ -133,8 +181,13 @@ export default function ProductActions({
         variantId: selectedVariant.id,
         quantity: 1,
         countryCode,
+        packagingVariantId: selectedPackaging?.id ?? null,
       })
-      showToast("Товар додано до кошика", { description: product.title })
+      showToast("Товар додано до кошика", {
+        description: selectedPackaging
+          ? `${product.title} · пакування «${selectedPackaging.title}», ${formatDimensions(selectedPackaging)}`
+          : product.title,
+      })
     } catch {
       // Most often the stock ran out after the page was loaded. Refresh so
       // the button reflects current availability. The real error text isn't
@@ -209,7 +262,40 @@ export default function ProductActions({
           )}
         </div>
 
-        <ProductPrice product={product} variant={selectedVariant} />
+        {showPackaging && (
+          <PackagingPicker
+            options={packagingOptions}
+            defaultPackaging={defaultPackaging}
+            selected={selectedPackaging}
+            onChange={(option) => setPackagingId(option?.id ?? null)}
+            currencyCode={currencyCode}
+            disabled={!!disabled || isAdding}
+          />
+        )}
+
+        {packagingTotal ? (
+          <div
+            className="flex flex-col gap-y-1 text-small-regular"
+            data-testid="packaging-price-breakdown"
+          >
+            <div className="flex justify-between text-graphite">
+              <span>Прикраса</span>
+              <span>{packagingTotal.jewelry}</span>
+            </div>
+            <div className="flex justify-between text-graphite">
+              <span>Пакування</span>
+              <span>+{packagingTotal.packaging}</span>
+            </div>
+            <div className="flex items-baseline justify-between text-ui-fg-base">
+              <span>Разом</span>
+              <span className="text-xl-semi" data-testid="product-total-price">
+                {packagingTotal.total}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <ProductPrice product={product} variant={selectedVariant} />
+        )}
 
         <div className="flex items-center gap-x-2">
           {selectedVariant && isValidVariant && !inStock ? (
@@ -265,6 +351,7 @@ export default function ProductActions({
           show={!inView}
           optionsDisabled={!!disabled || isAdding}
           onNotifyMe={() => setIsNotifyModalOpen(true)}
+          totalPrice={packagingTotal?.total}
         />
       </div>
     </>

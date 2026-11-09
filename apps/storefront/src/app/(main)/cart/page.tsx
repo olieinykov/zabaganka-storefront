@@ -1,4 +1,5 @@
 import { retrieveCart } from "@lib/data/cart"
+import { listPackagingOptions } from "@lib/data/packaging"
 // ACCOUNT FEATURE: customer retrieval, disabled while there is no account area.
 // import { retrieveCustomer } from "@lib/data/customer"
 import CartAvailabilityGuard from "@modules/cart/components/cart-availability-guard"
@@ -20,10 +21,19 @@ export default async function Cart() {
   // ACCOUNT FEATURE: restore and pass `customer` to CartTemplate below.
   // const customer = await retrieveCustomer()
 
+  const packaging = await listPackagingOptions(
+    (cart?.items ?? []).map((item) => item.product_id ?? ""),
+    { fresh: true }
+  )
+
   return (
     <>
       <CartAvailabilityGuard />
-      <CartTemplate cart={cart} customer={null} />
+      <CartTemplate
+        cart={cart}
+        customer={null}
+        packaging={packaging}
+      />
     </>
   )
 }

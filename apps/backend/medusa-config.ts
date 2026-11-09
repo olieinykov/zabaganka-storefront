@@ -36,6 +36,9 @@ module.exports = defineConfig({
       resolve: './src/modules/product-media',
     },
     {
+      resolve: './src/modules/packaging',
+    },
+    {
       resolve: '@medusajs/medusa/notification',
       options: {
         providers: [

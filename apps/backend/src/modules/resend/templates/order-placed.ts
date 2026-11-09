@@ -1,3 +1,5 @@
+import { formatDimensions, readLineItemPackaging } from "../../../lib/packaging"
+
 type Money = number | string | { numeric?: number; value?: string | number; amount?: number; toString?(): string } | null | undefined
 
 type OrderItem = {
@@ -122,6 +124,9 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
   const itemsHtml = order.items?.map((item) => {
    const title = escapeHtml(item.product_title || item.title || "Товар")
     const variant = item.variant_title ? escapeHtml(item.variant_title) : null
+    const packaging = readLineItemPackaging(
+      (item as { metadata?: Record<string, unknown> | null }).metadata
+    )
     const rawQty = (item as any).quantity
     const qty = rawQty !== undefined && rawQty !== null ? getNumber(rawQty as Money) : 1
     
@@ -147,6 +152,13 @@ export function orderPlacedEmail({ order }: OrderPlacedEmailProps): string {
         }">
           <div style="font-size:15px;color:#1a1a1a;font-weight:600;">${title}</div>
           ${variant ? `<div style="font-size:13px;color:#777;margin-top:2px;">${variant}</div>` : ""}
+          ${
+            packaging
+              ? `<div style="font-size:13px;color:#777;margin-top:2px;">Пакування: ${escapeHtml(
+                  `${packaging.title}, ${formatDimensions(packaging)}`
+                )} (+${formatMoney(packaging.unit_price, currency)} за шт.)</div>`
+              : ""
+          }
           <div style="font-size:13px;color:#777;margin-top:2px;">Кількість: ${qty}</div>
         </td>
         <td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;font-size:15px;color:#1a1a1a;white-space:nowrap;vertical-align:top;">

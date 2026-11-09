@@ -1,7 +1,7 @@
 "use server"
 
 import { sdk } from "@lib/config"
-import medusaError from "@lib/util/medusa-error"
+import medusaError, { toFriendlyMessage } from "@lib/util/medusa-error"
 import { HttpTypes } from "@medusajs/types"
 import { updateTag } from "next/cache"
 import { redirect } from "next/navigation"
@@ -157,10 +157,12 @@ export async function addToCart({
   variantId,
   quantity,
   countryCode,
+  packagingVariantId,
 }: {
   variantId: string
   quantity: number
   countryCode: string
+  packagingVariantId?: string | null
 }) {
   if (!variantId) {
     throw new Error("Missing variant ID when adding to cart")
@@ -176,16 +178,27 @@ export async function addToCart({
     ...(await getAuthHeaders()),
   }
 
-  await sdk.store.cart
-    .createLineItem(
-      cart.id,
-      {
-        variant_id: variantId,
-        quantity,
-      },
-      {},
-      headers
-    )
+  const request = packagingVariantId
+    ? sdk.client.fetch(`/store/carts/${cart.id}/packaging-items`, {
+        method: "POST",
+        body: {
+          variant_id: variantId,
+          quantity,
+          packaging_variant_id: packagingVariantId,
+        },
+        headers,
+      })
+    : sdk.store.cart.createLineItem(
+        cart.id,
+        {
+          variant_id: variantId,
+          quantity,
+        },
+        {},
+        headers
+      )
+
+  await request
     .then(async () => {
       const cartCacheTag = await getCacheTag("carts")
       updateTag(cartCacheTag)
@@ -227,6 +240,42 @@ export async function updateLineItem({
       updateTag(fulfillmentCacheTag)
     })
     .catch(medusaError)
+}
+
+export async function changeLineItemPackaging({
+  lineId,
+  packagingVariantId,
+}: {
+  lineId: string
+  packagingVariantId: string | null
+}): Promise<{ error: string | null }> {
+  const cartId = await getCartId()
+
+  if (!cartId || !lineId) {
+    return { error: "Кошик не знайдено. Оновіть сторінку." }
+  }
+
+  const headers = {
+    ...(await getAuthHeaders()),
+  }
+
+  try {
+    await sdk.client.fetch(`/store/carts/${cartId}/packaging-items/${lineId}`, {
+      method: "POST",
+      body: { packaging_variant_id: packagingVariantId },
+      headers,
+    })
+  } catch (err) {
+    return { error: toFriendlyMessage(err) }
+  }
+
+  const cartCacheTag = await getCacheTag("carts")
+  updateTag(cartCacheTag)
+
+  const fulfillmentCacheTag = await getCacheTag("fulfillment")
+  updateTag(fulfillmentCacheTag)
+
+  return { error: null }
 }
 
 export async function deleteLineItem(lineId: string) {

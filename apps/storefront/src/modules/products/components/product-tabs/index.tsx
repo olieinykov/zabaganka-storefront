@@ -14,7 +14,7 @@ type ProductTabsProps = {
 const ProductTabs = ({ product }: ProductTabsProps) => {
   const tabs = [
     {
-      label: "Інформація о продукті",
+      label: "Інформація про товар",
       component: <ProductInfoTab product={product} />,
     },
     {
@@ -62,13 +62,13 @@ const ProductInfoTab = ({ product }: ProductTabsProps) => {
         <div className="flex flex-col gap-y-4">
           <div>
             <span className="font-semibold">Вага</span>
-            <p>{product.weight ? `${product.weight} g` : "-"}</p>
+            <p>{product.weight ? `${product.weight} г` : "-"}</p>
           </div>
           <div>
             <span className="font-semibold">Розміри</span>
             <p>
               {product.length && product.width && product.height
-                ? `${product.length}L x ${product.width}W x ${product.height}H`
+                ? `${product.length} × ${product.width} × ${product.height} (Д × Ш × В)`
                 : "-"}
             </p>
           </div>

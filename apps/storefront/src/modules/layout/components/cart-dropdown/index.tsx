@@ -12,6 +12,7 @@ import Bag from "@modules/common/icons/bag"
 import { Button } from "@modules/common/components/ui"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
+import LineItemPackaging from "@modules/common/components/line-item-packaging"
 import LineItemPrice from "@modules/common/components/line-item-price"
 import LocalizedClientLink from "@modules/common/components/localized-client-link"
 import Thumbnail from "@modules/products/components/thumbnail"
@@ -155,6 +156,11 @@ const CartDropdown = ({
                                   variant={item.variant}
                                   data-testid="cart-item-variant"
                                   data-value={item.variant}
+                                />
+                                <LineItemPackaging
+                                  item={item}
+                                  currencyCode={cartState.currency_code}
+                                  className="text-xs text-graphite"
                                 />
                                 <span
                                   className="text-xs text-graphite"

@@ -1,5 +1,6 @@
 import repeat from "@lib/util/repeat"
 import { HttpTypes } from "@medusajs/types"
+import { DEFAULT_PACKAGING, PackagingData } from "@lib/util/packaging"
 import { Heading, Table } from "@modules/common/components/ui"
 
 import Item from "@modules/cart/components/item"
@@ -7,9 +8,10 @@ import SkeletonLineItem from "@modules/skeletons/components/skeleton-line-item"
 
 type ItemsTemplateProps = {
   cart?: HttpTypes.StoreCart
+  packaging?: PackagingData
 }
 
-const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
+const ItemsTemplate = ({ cart, packaging }: ItemsTemplateProps) => {
   const items = cart?.items
   return (
     <div>
@@ -45,6 +47,12 @@ const ItemsTemplate = ({ cart }: ItemsTemplateProps) => {
                         item={item}
                         currencyCode={cart?.currency_code}
                         isLine={true}
+                        packagingOptions={
+                          (item.product_id && packaging?.byProduct[item.product_id]) || []
+                        }
+                        defaultPackaging={
+                          packaging?.defaultPackaging ?? DEFAULT_PACKAGING
+                        }
                       />
                     )
                   })

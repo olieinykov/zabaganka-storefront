@@ -4,6 +4,13 @@ import { Table, Text, clx } from "@modules/common/components/ui"
 import { updateLineItem } from "@lib/data/cart"
 import { HttpTypes } from "@medusajs/types"
 import CartItemSelect from "@modules/cart/components/cart-item-select"
+import ItemPackaging from "@modules/cart/components/item-packaging"
+import {
+  DEFAULT_PACKAGING,
+  DefaultPackaging,
+  PackagingOption,
+} from "@lib/util/packaging"
+import LineItemPackaging from "@modules/common/components/line-item-packaging"
 import ErrorMessage from "@modules/checkout/components/error-message"
 import DeleteButton from "@modules/common/components/delete-button"
 import LineItemOptions from "@modules/common/components/line-item-options"
@@ -19,9 +26,18 @@ type ItemProps = {
   type?: "full" | "preview"
   currencyCode: string
   isLine?: boolean
+  packagingOptions?: PackagingOption[]
+  defaultPackaging?: DefaultPackaging
 }
 
-const Item = ({ item, type = "full", currencyCode, isLine = false }: ItemProps) => {
+const Item = ({
+  item,
+  type = "full",
+  currencyCode,
+  isLine = false,
+  packagingOptions = [],
+  defaultPackaging = DEFAULT_PACKAGING,
+}: ItemProps) => {
   const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -124,6 +140,16 @@ const Item = ({ item, type = "full", currencyCode, isLine = false }: ItemProps) 
           {item.product_title}
         </Text>
         <LineItemOptions variant={item.variant} data-testid="product-variant" />
+        {type === "full" ? (
+          <ItemPackaging
+            item={item}
+            options={packagingOptions}
+            defaultPackaging={defaultPackaging}
+            currencyCode={currencyCode}
+          />
+        ) : (
+          <LineItemPackaging item={item} currencyCode={currencyCode} />
+        )}
       </Table.Cell>
 
       {type === "full" && (

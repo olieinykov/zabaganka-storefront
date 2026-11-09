@@ -1,6 +1,7 @@
 import { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { COUNTRY_CODE, PRODUCT_DEFAULT_FIELDS } from "@lib/constants"
+import { listPackagingOptions } from "@lib/data/packaging"
 import { listProducts } from "@lib/data/products"
 import { getRegion } from "@lib/data/regions"
 import { getDefaultVariant } from "@lib/util/product"
@@ -107,6 +108,8 @@ export default async function ProductPage(props: Props) {
     notFound()
   }
 
+  const packaging = await listPackagingOptions([pricedProduct.id])
+
   const selectedVariantId =
     (searchParams.v_id &&
       pricedProduct.variants?.some((v) => v.id === searchParams.v_id) &&
@@ -127,6 +130,7 @@ export default async function ProductPage(props: Props) {
       countryCode={COUNTRY_CODE}
       media={media}
       selectedVariantId={selectedVariantId}
+      packaging={packaging}
     />
   )
 }
