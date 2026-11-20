@@ -4,6 +4,7 @@ import { PAGE_CONTENT_MODULE } from "../../../modules/page-content"
 import PageContentModuleService from "../../../modules/page-content/service"
 import {
   PAGE_BLOCKS,
+  BlockKey,
   PageKey,
   getBlockDefault,
   isValidPage,
@@ -36,7 +37,9 @@ export async function GET(
       return {
         page,
         block_key,
-        content: row ? row.content : getBlockDefault(block_key as any),
+        content: row
+          ? row.content
+          : getBlockDefault(page as PageKey, block_key as BlockKey),
         updated_at: row?.updated_at ?? null,
         is_customized: !!row,
       }

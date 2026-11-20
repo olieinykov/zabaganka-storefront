@@ -5,7 +5,7 @@ import PageContentModuleService from "../../../../modules/page-content/service"
 import { upsertPageContentBlockWorkflow } from "../../../../workflows/upsert-page-content-block"
 import { notifyStorefrontRevalidate } from "../../../../lib/notify-storefront-revalidate"
 import {
-  HomeBlockKey,
+  BlockKey,
   PageKey,
   getBlockDefault,
   getBlockSchema,
@@ -30,7 +30,7 @@ function resolvePageAndBlock(req: MedusaRequest) {
     )
   }
 
-  return { page: page as PageKey, block_key: block_key as HomeBlockKey }
+  return { page: page as PageKey, block_key: block_key as BlockKey }
 }
 
 export async function GET(
@@ -49,7 +49,7 @@ export async function GET(
     block: {
       page,
       block_key,
-      content: row ? row.content : getBlockDefault(block_key),
+      content: row ? row.content : getBlockDefault(page, block_key),
       updated_at: row?.updated_at ?? null,
       is_customized: !!row,
     },
@@ -62,7 +62,7 @@ export async function POST(
 ): Promise<void> {
   const { page, block_key } = resolvePageAndBlock(req)
 
-  const schema = getBlockSchema(block_key)
+  const schema = getBlockSchema(page, block_key)
   const parsed = schema.safeParse(req.body)
 
   if (!parsed.success) {

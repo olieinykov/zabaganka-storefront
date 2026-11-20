@@ -4,6 +4,7 @@ import { PAGE_CONTENT_MODULE } from "../../../modules/page-content"
 import PageContentModuleService from "../../../modules/page-content/service"
 import {
   PAGE_BLOCKS,
+  BlockKey,
   PageKey,
   getBlockDefault,
   isValidPage,
@@ -33,7 +34,8 @@ export async function GET(
   const blocks: Record<string, unknown> = {}
   for (const block_key of PAGE_BLOCKS[page as PageKey] as readonly string[]) {
     blocks[block_key] =
-      existingByKey.get(block_key) ?? getBlockDefault(block_key as any)
+      existingByKey.get(block_key) ??
+      getBlockDefault(page as PageKey, block_key as BlockKey)
   }
 
   res.set("Cache-Control", "public, max-age=30, stale-while-revalidate=300")

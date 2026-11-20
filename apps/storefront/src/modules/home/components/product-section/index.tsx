@@ -67,7 +67,7 @@ export default async function ProductSection({
         linkHref={linkHref}
         linkLabel={linkLabel}
       />
-      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 small:grid-cols-4 gap-x-4 gap-y-8 small:gap-x-6">
+      <div className="grid grid-cols-1 min-[430px]:grid-cols-2 min-[768px]:grid-cols-4 gap-x-4 gap-y-8 small:gap-x-6">
         {products.map((product) => (
           <ProductPreview
             key={product.id}

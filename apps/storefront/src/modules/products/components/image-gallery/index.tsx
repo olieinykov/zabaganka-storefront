@@ -97,11 +97,16 @@ const ImageGallery = ({ media: slides }: ImageGalleryProps) => {
     .map((slide, i) => ({ slide, index: windowStart + i }))
 
   return (
-    <div className="relative small:mx-16">
+    <div className="relative large:mx-16">
+      {/*
+        The thumbnail rail takes 92px on the right. A single-media product has
+        no rail, so it gets the same width split on both sides - otherwise its
+        main image renders noticeably wider than on other products.
+      */}
       <div
         className={clx(
           "relative flex items-start group",
-          isMultiple && "small:mr-[92px]"
+          isMultiple ? "small:mr-[92px]" : "small:mx-[46px]"
         )}
       >
         <div

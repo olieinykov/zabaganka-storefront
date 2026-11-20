@@ -43,6 +43,12 @@ export default async function Footer({
               Про нас
             </LocalizedClientLink>
             <LocalizedClientLink
+              href="/contacts"
+              className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
+            >
+              Контакти
+            </LocalizedClientLink>
+            <LocalizedClientLink
               href="/faq"
               className="text-sm text-white transition-transform duration-200 hover:-translate-y-0.5 interactive"
             >

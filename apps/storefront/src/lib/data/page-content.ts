@@ -2,8 +2,9 @@
 
 import { sdk } from "@lib/config"
 import {
-  HOME_PAGE_CONTENT_DEFAULTS,
-  HomePageContent,
+  PAGE_CONTENT_DEFAULTS,
+  PageContentKey,
+  PageContentMap,
 } from "./page-content-types"
 
 /**
@@ -12,12 +13,14 @@ import {
  * via `/api/revalidate` (see backend's page-content API route); otherwise it
  * revalidates on the normal ISR window below.
  *
- * Falls back to hardcoded defaults on any error so the home page never
- * breaks because of a CMS/backend hiccup.
+ * Falls back to hardcoded defaults on any error so a page never breaks
+ * because of a CMS/backend hiccup.
  */
-export async function getPageContent(
-  page: "home" = "home"
-): Promise<HomePageContent> {
+export async function getPageContent<P extends PageContentKey>(
+  page: P
+): Promise<PageContentMap[P]> {
+  const defaults = PAGE_CONTENT_DEFAULTS[page]
+
   try {
     const res = await sdk.client.fetch<{
       page: string
@@ -30,10 +33,10 @@ export async function getPageContent(
     })
 
     return {
-      ...HOME_PAGE_CONTENT_DEFAULTS,
-      ...(res.blocks as Partial<HomePageContent>),
+      ...defaults,
+      ...(res.blocks as Partial<PageContentMap[P]>),
     }
   } catch {
-    return HOME_PAGE_CONTENT_DEFAULTS
+    return defaults
   }
 }
